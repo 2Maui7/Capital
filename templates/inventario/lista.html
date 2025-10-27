@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario - Imprenta Capital{% endblock %}
+{% block page_title %}Gestión de Inventario{% endblock %}
+{% block page_subtitle %}Control de materiales y stock{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-box-seam me-2"></i>Inventario de Materiales
+        </div>
+        <a href="{% url 'core:inventario_crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo Material
+        </a>
+    </div>
+    <div class="card-body">
+        {% if inventario %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Stock Mínimo</th>
+                        <th>Estado</th>
+                        <th>Proveedor</th>
+                        <th>Precio Unit.</th>
+                        <th>Última Actualización</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for material in inventario %}
+                    <tr {% if material.necesita_reposicion %}class="table-warning"{% endif %}>
+                        <td>
+                            <strong>{{ material.nombre }}</strong>
+                            {% if material.descripcion %}
+                                <br><small class="text-muted">{{ material.descripcion|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="{% if material.cantidad == 0 %}text-danger{% elif material.necesita_reposicion %}text-warning{% else %}text-success{% endif %}">
+                                {{ material.cantidad }}
+                            </strong>
+                        </td>
+                        <td>{{ material.get_unidad_display }}</td>
+                        <td>{{ material.cantidad_minima }}</td>
+                        <td>
+                            {% if material.estado_stock == 'agotado' %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-circle"></i> AGOTADO
+                                </span>
+                            {% elif material.estado_stock == 'bajo' %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-exclamation-triangle"></i> BAJO STOCK
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> NORMAL
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ material.proveedor|default:"-" }}</td>
+                        <td>Bs. {{ material.precio_unitario }}</td>
+                        <td>
+                            <small>{{ material.ultima_actualizacion|date:"d/m/Y H:i" }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if es_administrador %}
+                                <a href="/admin/core/inventario/{{ material.id }}/change/" class="btn btn-outline-primary" title="Editar" target="_blank">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-outline-success" title="Registrar entrada" data-bs-toggle="modal" data-bs-target="#movimientoModal" data-material="{{ material.id }}" data-nombre="{{ material.nombre }}">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Estadísticas -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5>{{ inventario|length }}</h5>
+                        <small>Total Materiales</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5>{% for m in inventario %}{% if m.necesita_reposicion %}1{% endif %}{% endfor %}</h5>
+                        <small>Materiales Bajo Stock</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <h5>{% for m in inventario %}{% if m.cantidad == 0 %}1{% endif %}{% endfor %}</h5>
+                        <small>Materiales Agotados</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No hay materiales en el inventario</p>
+            <a href="{% url 'core:inventario_crear' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Agregar Primer Material
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Alerta de materiales críticos -->
+{% for material in inventario %}
+    {% if material.necesita_reposicion %}
+    <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Alerta:</strong> El material <strong>{{ material.nombre }}</strong> está {% if material.cantidad == 0 %}agotado{% else %}bajo en stock ({{ material.cantidad }} {{ material.unidad }}){% endif %}. Se recomienda realizar pedido al proveedor.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endblock %}

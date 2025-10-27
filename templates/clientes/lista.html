@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Clientes - Imprenta Capital{% endblock %}
+{% block page_title %}Gestión de Clientes{% endblock %}
+{% block page_subtitle %}Lista de clientes registrados{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-people me-2"></i>Lista de Clientes
+        </div>
+        <a href="{% url 'core:cliente_crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo Cliente
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Buscador -->
+        <form method="get" class="mb-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control" placeholder="Buscar cliente por nombre, email, teléfono o NIT/CI..." value="{{ query }}">
+                <button class="btn btn-primary" type="submit">Buscar</button>
+                {% if query %}
+                <a href="{% url 'core:clientes_lista' %}" class="btn btn-outline-secondary">Limpiar</a>
+                {% endif %}
+            </div>
+        </form>
+        
+        {% if clientes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>NIT/CI</th>
+                        <th>Contacto</th>
+                        <th>Email</th>
+                        <th>Pedidos</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td>
+                            <strong>{{ cliente.nombre }}</strong>
+                            {% if cliente.es_frecuente %}
+                                <i class="bi bi-star-fill text-warning" title="Cliente Frecuente"></i>
+                            {% endif %}
+                        </td>
+                        <td>{{ cliente.nit_ci|default:"-" }}</td>
+                        <td>
+                            {% if cliente.telefono %}
+                                <i class="bi bi-telephone me-1"></i>{{ cliente.telefono }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cliente.email|default:"-" }}</td>
+                        <td><span class="badge bg-info">{{ cliente.cantidad_pedidos }}</span></td>
+                        <td>
+                            {% if cliente.es_frecuente %}
+                                <span class="badge bg-success">Frecuente - {{ cliente.obtener_descuento }}% desc.</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Regular</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'core:cliente_editar' cliente.pk %}" class="btn btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if es_administrador %}
+                                <a href="{% url 'core:cliente_eliminar' cliente.pk %}" class="btn btn-outline-danger" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">
+                {% if query %}
+                    No se encontraron clientes con "{{ query }}"
+                {% else %}
+                    No hay clientes registrados
+                {% endif %}
+            </p>
+            <a href="{% url 'core:cliente_crear' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Registrar Primer Cliente
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

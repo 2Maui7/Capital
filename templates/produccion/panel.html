@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Producción - Imprenta Capital{% endblock %}
+{% block page_title %}Panel de Producción{% endblock %}
+{% block page_subtitle %}Control de trabajos en proceso{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-gear" style="font-size: 2rem;"></i>
+                <h3 class="mt-2">{{ producciones|length }}</h3>
+                <p class="mb-0">Trabajos Activos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
+                <h3 class="mt-2">{% for p in producciones %}{% if p.estado == 'en_proceso' %}1{% endif %}{% endfor %}</h3>
+                <p class="mb-0">En Proceso</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-pause-circle" style="font-size: 2rem;"></i>
+                <h3 class="mt-2">{% for p in producciones %}{% if p.estado == 'no_iniciado' %}1{% endif %}{% endfor %}</h3>
+                <p class="mb-0">Sin Iniciar</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                <h3 class="mt-2">{% for p in producciones %}{% if p.estado == 'pausado' %}1{% endif %}{% endfor %}</h3>
+                <p class="mb-0">Pausados</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-list-task me-2"></i>Trabajos en Producción
+    </div>
+    <div class="card-body">
+        {% if producciones %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Cliente</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th>Empleado</th>
+                        <th>Tiempo Est.</th>
+                        <th>Tiempo Real</th>
+                        <th>Fecha Inicio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for produccion in producciones %}
+                    <tr>
+                        <td><strong>#{{ produccion.pedido.id }}</strong></td>
+                        <td>{{ produccion.pedido.cliente.nombre }}</td>
+                        <td>{{ produccion.pedido.descripcion|truncatewords:8 }}</td>
+                        <td>
+                            {% if produccion.estado == 'no_iniciado' %}
+                                <span class="badge bg-secondary">No Iniciado</span>
+                            {% elif produccion.estado == 'en_proceso' %}
+                                <span class="badge bg-warning">En Proceso</span>
+                            {% elif produccion.estado == 'pausado' %}
+                                <span class="badge bg-danger">Pausado</span>
+                            {% else %}
+                                <span class="badge bg-success">Terminado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if produccion.empleado %}
+                                <i class="bi bi-person"></i> {{ produccion.empleado.get_full_name|default:produccion.empleado.username }}
+                            {% else %}
+                                <span class="text-muted">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ produccion.tiempo_estimado }} hrs</td>
+                        <td>
+                            {% if produccion.tiempo_real %}
+                                {{ produccion.tiempo_real }} hrs
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if produccion.fecha_inicio %}
+                                {{ produccion.fecha_inicio|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if produccion.estado == 'no_iniciado' %}
+                                    <a href="{% url 'core:produccion_iniciar' produccion.pk %}" class="btn btn-outline-success" title="Iniciar">
+                                        <i class="bi bi-play-circle"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'core:pedido_detalle' produccion.pedido.pk %}" class="btn btn-outline-primary" title="Ver Pedido">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if es_administrador %}
+                                <a href="/admin/core/produccion/{{ produccion.id }}/change/" class="btn btn-outline-secondary" title="Editar" target="_blank">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No hay trabajos en producción actualmente</p>
+            <a href="{% url 'core:pedidos_lista' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-cart me-2"></i>Ver Pedidos Pendientes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if producciones %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Instrucciones
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>No Iniciado:</strong> Trabajos que aún no han comenzado. Haz clic en el botón de play para iniciarlos.</li>
+                    <li><strong>En Proceso:</strong> Trabajos actualmente en producción. El tiempo se registra automáticamente.</li>
+                    <li><strong>Pausado:</strong> Trabajos que han sido pausados temporalmente.</li>
+                    <li><strong>Terminado:</strong> Trabajos completados. Se actualiza el estado del pedido automáticamente.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

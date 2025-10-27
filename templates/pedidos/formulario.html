@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Pedido - Imprenta Capital{% endblock %}
+{% block page_title %}{{ accion }} Pedido{% endblock %}
+{% block page_subtitle %}Formulario de registro de pedido{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-cart me-2"></i>{{ accion }} Pedido
+            </div>
+            <div class="card-body">
+                <form method="post" id="pedidoForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.cliente.id_for_label }}" class="form-label">Cliente *</label>
+                            {{ form.cliente }}
+                            {% if form.cliente.errors %}
+                                <div class="text-danger small">{{ form.cliente.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Selecciona el cliente que realiza el pedido</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.producto.id_for_label }}" class="form-label">Producto *</label>
+                            {{ form.producto }}
+                            {% if form.producto.errors %}
+                                <div class="text-danger small">{{ form.producto.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">Cantidad *</label>
+                            {{ form.cantidad }}
+                            {% if form.cantidad.errors %}
+                                <div class="text-danger small">{{ form.cantidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">Precio Unitario *</label>
+                            {{ form.precio_unitario }}
+                            {% if form.precio_unitario.errors %}
+                                <div class="text-danger small">{{ form.precio_unitario.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.descuento.id_for_label }}" class="form-label">Descuento (%)</label>
+                            {{ form.descuento }}
+                            {% if form.descuento.errors %}
+                                <div class="text-danger small">{{ form.descuento.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción del Pedido *</label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.especificaciones.id_for_label }}" class="form-label">Especificaciones Técnicas</label>
+                        {{ form.especificaciones }}
+                        {% if form.especificaciones.errors %}
+                            <div class="text-danger small">{{ form.especificaciones.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">Detalles adicionales: tamaño, colores, acabados, etc.</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_entrega.id_for_label }}" class="form-label">Fecha de Entrega *</label>
+                            {{ form.fecha_entrega }}
+                            {% if form.fecha_entrega.errors %}
+                                <div class="text-danger small">{{ form.fecha_entrega.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">Estado</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="text-danger small">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        {% if pedido %}
+                        <a href="{% url 'core:pedido_detalle' pedido.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        {% else %}
+                        <a href="{% url 'core:pedidos_lista' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Guardar Pedido
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Información
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">Instrucciones:</h6>
+                <ul class="small">
+                    <li>Selecciona el cliente del pedido</li>
+                    <li>Los clientes frecuentes tienen descuento automático del 10%</li>
+                    <li>Especifica cantidad y precio unitario</li>
+                    <li>El precio total se calculará automáticamente</li>
+                    <li>Indica la fecha de entrega estimada</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <strong>Cliente Frecuente:</strong> A partir del 5to pedido, el cliente obtiene 10% de descuento automático
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

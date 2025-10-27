@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Imprenta Capital{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Resumen general del sistema{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Estadísticas principales -->
+    <div class="col-md-3 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-people" style="font-size: 3rem; color: #667eea;"></i>
+            <div class="stat-number">{{ total_clientes }}</div>
+            <div class="stat-label">Clientes Totales</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-cart" style="font-size: 3rem; color: #28a745;"></i>
+            <div class="stat-number">{{ pedidos_pendientes }}</div>
+            <div class="stat-label">Pedidos Pendientes</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-gear" style="font-size: 3rem; color: #ffc107;"></i>
+            <div class="stat-number">{{ pedidos_en_produccion }}</div>
+            <div class="stat-label">En Producción</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
+            <div class="stat-number">{{ materiales_bajo_stock }}</div>
+            <div class="stat-label">Materiales Bajos</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Últimos pedidos -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart me-2"></i>Últimos Pedidos</span>
+                <a href="{% url 'core:pedidos_lista' %}" class="btn btn-sm btn-primary">Ver Todos</a>
+            </div>
+            <div class="card-body p-0">
+                {% if ultimos_pedidos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th>Producto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pedido in ultimos_pedidos %}
+                            <tr>
+                                <td><strong>#{{ pedido.id }}</strong></td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.producto.nombre }}</td>
+                                <td>
+                                    {% if pedido.estado == 'pendiente' %}
+                                        <span class="badge bg-secondary">Pendiente</span>
+                                    {% elif pedido.estado == 'en_proceso' %}
+                                        <span class="badge bg-info">En Proceso</span>
+                                    {% elif pedido.estado == 'en_produccion' %}
+                                        <span class="badge bg-warning">En Producción</span>
+                                    {% elif pedido.estado == 'terminado' %}
+                                        <span class="badge bg-success">Terminado</span>
+                                    {% elif pedido.estado == 'entregado' %}
+                                        <span class="badge bg-primary">Entregado</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Cancelado</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pedido.fecha_creacion|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2">No hay pedidos registrados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertas de inventario -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-exclamation-triangle me-2"></i>Alertas de Inventario
+            </div>
+            <div class="card-body">
+                {% if materiales_criticos %}
+                <ul class="list-group list-group-flush">
+                    {% for material in materiales_criticos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <strong>{{ material.nombre }}</strong>
+                            <br>
+                            <small class="text-muted">{{ material.cantidad }} {{ material.unidad }}</small>
+                        </div>
+                        {% if material.cantidad == 0 %}
+                            <span class="badge bg-danger">Agotado</span>
+                        {% else %}
+                            <span class="badge bg-warning">Bajo</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="text-center mt-3">
+                    <a href="{% url 'core:inventario_lista' %}" class="btn btn-sm btn-outline-primary">Ver Inventario</a>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
+                    <p class="mt-2 mb-0">Inventario en buen estado</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Acciones rápidas -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>Acciones Rápidas
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'core:pedido_crear' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle me-2"></i>Nuevo Pedido
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'core:cliente_crear' %}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-person-plus me-2"></i>Nuevo Cliente
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'core:inventario_crear' %}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-box-seam me-2"></i>Agregar Material
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'core:produccion_panel' %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-gear me-2"></i>Panel de Producción
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

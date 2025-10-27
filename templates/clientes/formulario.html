@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Cliente - Imprenta Capital{% endblock %}
+{% block page_title %}{{ accion }} Cliente{% endblock %}
+{% block page_subtitle %}Formulario de registro de cliente{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-person me-2"></i>{{ accion }} Cliente
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre Completo *</label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small">{{ form.nombre.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.nit_ci.id_for_label }}" class="form-label">NIT/CI</label>
+                            {{ form.nit_ci }}
+                            {% if form.nit_ci.errors %}
+                                <div class="text-danger small">{{ form.nit_ci.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.telefono.id_for_label }}" class="form-label">Teléfono</label>
+                            {{ form.telefono }}
+                            {% if form.telefono.errors %}
+                                <div class="text-danger small">{{ form.telefono.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.direccion.id_for_label }}" class="form-label">Dirección</label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}
+                            <div class="text-danger small">{{ form.direccion.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if cliente %}
+                    <div class="alert alert-info">
+                        <strong>Estado del Cliente:</strong><br>
+                        Pedidos realizados: <strong>{{ cliente.cantidad_pedidos }}</strong><br>
+                        {% if cliente.es_frecuente %}
+                            <i class="bi bi-star-fill text-warning"></i> Cliente Frecuente - Descuento: <strong>{{ cliente.obtener_descuento }}%</strong>
+                        {% else %}
+                            Falta {{ 5|add:"-"|add:cliente.cantidad_pedidos }} pedidos para ser cliente frecuente
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'core:clientes_lista' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Guardar Cliente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

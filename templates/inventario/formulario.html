@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Material - Imprenta Capital{% endblock %}
+{% block page_title %}{{ accion }} Material{% endblock %}
+{% block page_subtitle %}Formulario de registro de material{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-box-seam me-2"></i>{{ accion }} Material al Inventario
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre del Material *</label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">{{ form.nombre.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción</label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">Cantidad Inicial *</label>
+                            {{ form.cantidad }}
+                            {% if form.cantidad.errors %}
+                                <div class="text-danger small">{{ form.cantidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad_minima.id_for_label }}" class="form-label">Stock Mínimo *</label>
+                            {{ form.cantidad_minima }}
+                            {% if form.cantidad_minima.errors %}
+                                <div class="text-danger small">{{ form.cantidad_minima.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Alerta cuando llegue a este nivel</small>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.unidad.id_for_label }}" class="form-label">Unidad de Medida *</label>
+                            {{ form.unidad }}
+                            {% if form.unidad.errors %}
+                                <div class="text-danger small">{{ form.unidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.proveedor.id_for_label }}" class="form-label">Proveedor</label>
+                            {{ form.proveedor }}
+                            {% if form.proveedor.errors %}
+                                <div class="text-danger small">{{ form.proveedor.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">Precio Unitario *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Bs.</span>
+                                {{ form.precio_unitario }}
+                            </div>
+                            {% if form.precio_unitario.errors %}
+                                <div class="text-danger small">{{ form.precio_unitario.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Nota:</strong> El sistema generará alertas automáticas cuando la cantidad esté por debajo del stock mínimo establecido.
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'core:inventario_lista' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Guardar Material
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,282 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
+from decimal import Decimal
+
+
+# Modelo de Cliente
+class Cliente(models.Model):
+    nombre = models.CharField(max_length=255, verbose_name="Nombre completo")
+    telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
+    email = models.EmailField(max_length=255, blank=True, null=True, verbose_name="Correo electrónico")
+    direccion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dirección")
+    nit_ci = models.CharField(max_length=20, blank=True, null=True, verbose_name="NIT/CI")
+    es_frecuente = models.BooleanField(default=False, verbose_name="Cliente frecuente")
+    cantidad_pedidos = models.IntegerField(default=0, verbose_name="Cantidad de pedidos")
+    fecha_registro = models.DateField(auto_now_add=True, verbose_name="Fecha de registro")
+    
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+        ordering = ['-fecha_registro']
+    
+    def __str__(self):
+        return self.nombre
+    
+    def actualizar_frecuencia(self):
+        """Marca como cliente frecuente si tiene más de 5 pedidos"""
+        if self.cantidad_pedidos >= 5:
+            self.es_frecuente = True
+            self.save()
+    
+    def obtener_descuento(self):
+        """Retorna el porcentaje de descuento según el tipo de cliente"""
+        return 10 if self.es_frecuente else 0
+
+
+# Modelo de Producto
+class Producto(models.Model):
+    TIPOS_PRODUCTO = [
+        ('tarjetas', 'Tarjetas de presentación'),
+        ('volantes', 'Volantes'),
+        ('banners', 'Banners'),
+        ('folletos', 'Folletos'),
+        ('libros', 'Libros'),
+        ('revistas', 'Revistas'),
+        ('otros', 'Otros'),
+    ]
+    
+    nombre = models.CharField(max_length=255, verbose_name="Nombre del producto")
+    tipo = models.CharField(max_length=100, choices=TIPOS_PRODUCTO, verbose_name="Tipo de producto")
+    descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    precio_unitario = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Precio unitario"
+    )
+    imagen = models.ImageField(upload_to='productos/', blank=True, null=True, verbose_name="Imagen")
+    activo = models.BooleanField(default=True, verbose_name="Producto activo")
+    
+    class Meta:
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.get_tipo_display()}"
+
+
+# Modelo de Inventario
+class Inventario(models.Model):
+    UNIDADES = [
+        ('unidad', 'Unidad'),
+        ('kg', 'Kilogramo'),
+        ('litro', 'Litro'),
+        ('resma', 'Resma'),
+        ('caja', 'Caja'),
+    ]
+    
+    nombre = models.CharField(max_length=255, verbose_name="Nombre del material")
+    descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    cantidad = models.IntegerField(default=0, verbose_name="Cantidad disponible")
+    cantidad_minima = models.IntegerField(default=10, verbose_name="Cantidad mínima")
+    unidad = models.CharField(max_length=50, choices=UNIDADES, default='unidad', verbose_name="Unidad de medida")
+    proveedor = models.CharField(max_length=255, blank=True, null=True, verbose_name="Proveedor")
+    precio_unitario = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0,
+        verbose_name="Precio unitario"
+    )
+    ultima_actualizacion = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
+    
+    class Meta:
+        verbose_name = "Material de Inventario"
+        verbose_name_plural = "Inventario"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.cantidad} {self.unidad})"
+    
+    def necesita_reposicion(self):
+        """Verifica si el material necesita reposición"""
+        return self.cantidad <= self.cantidad_minima
+    
+    def estado_stock(self):
+        """Retorna el estado del stock"""
+        if self.cantidad == 0:
+            return 'agotado'
+        elif self.necesita_reposicion():
+            return 'bajo'
+        else:
+            return 'normal'
+
+
+# Modelo de Pedido
+class Pedido(models.Model):
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('en_proceso', 'En Proceso'),
+        ('en_produccion', 'En Producción'),
+        ('terminado', 'Terminado'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='pedidos', verbose_name="Cliente")
+    producto = models.ForeignKey(Producto, on_delete=models.SET_NULL, null=True, related_name='pedidos', verbose_name="Producto")
+    cantidad = models.IntegerField(validators=[MinValueValidator(1)], verbose_name="Cantidad")
+    descripcion = models.TextField(verbose_name="Descripción del pedido")
+    especificaciones = models.TextField(blank=True, null=True, verbose_name="Especificaciones técnicas")
+    
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio unitario")
+    descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Descuento (%)")
+    precio_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio total")
+    
+    estado = models.CharField(max_length=50, choices=ESTADOS, default='pendiente', verbose_name="Estado")
+    
+    fecha_creacion = models.DateField(auto_now_add=True, verbose_name="Fecha de creación")
+    fecha_entrega = models.DateField(verbose_name="Fecha de entrega estimada")
+    fecha_entregado = models.DateField(blank=True, null=True, verbose_name="Fecha de entrega real")
+    
+    usuario_registro = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='pedidos_registrados', verbose_name="Registrado por")
+    
+    class Meta:
+        verbose_name = "Pedido"
+        verbose_name_plural = "Pedidos"
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f"Pedido #{self.id} - {self.cliente.nombre} - {self.estado}"
+    
+    def save(self, *args, **kwargs):
+        # Calcular precio total considerando descuento
+        subtotal = self.precio_unitario * self.cantidad
+        descuento_monto = subtotal * (self.descuento / 100)
+        self.precio_total = subtotal - descuento_monto
+        
+        super().save(*args, **kwargs)
+        
+        # Actualizar contador de pedidos del cliente
+        self.cliente.cantidad_pedidos = self.cliente.pedidos.count()
+        self.cliente.actualizar_frecuencia()
+
+
+# Modelo de Producción
+class Produccion(models.Model):
+    ESTADOS_PRODUCCION = [
+        ('no_iniciado', 'No Iniciado'),
+        ('en_proceso', 'En Proceso'),
+        ('pausado', 'Pausado'),
+        ('terminado', 'Terminado'),
+    ]
+    
+    pedido = models.OneToOneField(Pedido, on_delete=models.CASCADE, related_name='produccion', verbose_name="Pedido")
+    estado = models.CharField(max_length=50, choices=ESTADOS_PRODUCCION, default='no_iniciado', verbose_name="Estado de producción")
+    empleado = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='producciones', verbose_name="Empleado asignado")
+    
+    tiempo_estimado = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Tiempo estimado (horas)")
+    tiempo_real = models.DecimalField(max_digits=5, decimal_places=2, default=0, blank=True, null=True, verbose_name="Tiempo real (horas)")
+    
+    fecha_inicio = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de inicio")
+    fecha_finalizacion = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de finalización")
+    
+    observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+    
+    class Meta:
+        verbose_name = "Producción"
+        verbose_name_plural = "Producciones"
+        ordering = ['-fecha_inicio']
+    
+    def __str__(self):
+        return f"Producción de {self.pedido}"
+    
+    def iniciar_produccion(self):
+        """Inicia la producción y actualiza el estado del pedido"""
+        from django.utils import timezone
+        self.estado = 'en_proceso'
+        self.fecha_inicio = timezone.now()
+        self.save()
+        
+        self.pedido.estado = 'en_produccion'
+        self.pedido.save()
+    
+    def finalizar_produccion(self):
+        """Finaliza la producción y actualiza el estado del pedido"""
+        from django.utils import timezone
+        self.estado = 'terminado'
+        self.fecha_finalizacion = timezone.now()
+        
+        if self.fecha_inicio:
+            delta = self.fecha_finalizacion - self.fecha_inicio
+            self.tiempo_real = round(delta.total_seconds() / 3600, 2)
+        
+        self.save()
+        
+        self.pedido.estado = 'terminado'
+        self.pedido.save()
+
+
+# Modelo de Movimiento de Inventario
+class MovimientoInventario(models.Model):
+    TIPOS_MOVIMIENTO = [
+        ('entrada', 'Entrada'),
+        ('salida', 'Salida'),
+        ('ajuste', 'Ajuste'),
+    ]
+    
+    inventario = models.ForeignKey(Inventario, on_delete=models.CASCADE, related_name='movimientos', verbose_name="Material")
+    tipo = models.CharField(max_length=20, choices=TIPOS_MOVIMIENTO, verbose_name="Tipo de movimiento")
+    cantidad = models.IntegerField(verbose_name="Cantidad")
+    motivo = models.CharField(max_length=255, verbose_name="Motivo")
+    produccion = models.ForeignKey(Produccion, on_delete=models.SET_NULL, null=True, blank=True, related_name='movimientos_inventario', verbose_name="Relacionado a producción")
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Usuario")
+    fecha = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
+    
+    class Meta:
+        verbose_name = "Movimiento de Inventario"
+        verbose_name_plural = "Movimientos de Inventario"
+        ordering = ['-fecha']
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.inventario.nombre} ({self.cantidad})"
+    
+    def save(self, *args, **kwargs):
+        # Actualizar cantidad en inventario
+        if self.tipo == 'entrada':
+            self.inventario.cantidad += self.cantidad
+        elif self.tipo == 'salida':
+            self.inventario.cantidad -= self.cantidad
+        elif self.tipo == 'ajuste':
+            self.inventario.cantidad = self.cantidad
+        
+        self.inventario.save()
+        super().save(*args, **kwargs)
+
+
+# Modelo de Perfil de Usuario (extender User de Django)
+class PerfilUsuario(models.Model):
+    ROLES = [
+        ('administrador', 'Administrador'),
+        ('empleado', 'Personal de Producción'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil', verbose_name="Usuario")
+    rol = models.CharField(max_length=20, choices=ROLES, default='empleado', verbose_name="Rol")
+    telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
+    foto = models.ImageField(upload_to='usuarios/', blank=True, null=True, verbose_name="Foto de perfil")
+    activo = models.BooleanField(default=True, verbose_name="Usuario activo")
+    
+    class Meta:
+        verbose_name = "Perfil de Usuario"
+        verbose_name_plural = "Perfiles de Usuario"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_rol_display()}"
+    
+    def es_administrador(self):
+        return self.rol == 'administrador'
+    
+    def es_empleado(self):
+        return self.rol == 'empleado'
