@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
-from .models import Cliente, Producto, Pedido, Inventario, Produccion, MovimientoInventario, PerfilUsuario
+from .models import Cliente, Producto, Pedido, Inventario, Produccion, MovimientoInventario, PerfilUsuario, Proveedor, Compra
 
 
 class LoginForm(AuthenticationForm):
@@ -151,3 +151,39 @@ class PerfilUsuarioForm(forms.ModelForm):
             'foto': forms.FileInput(attrs={'class': 'form-control'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class ProveedorForm(forms.ModelForm):
+    """Formulario para gestión de proveedores"""
+    class Meta:
+        model = Proveedor
+        fields = ['nombre', 'contacto', 'telefono', 'email', 'direccion', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'contacto': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class CompraForm(forms.ModelForm):
+    """Formulario para compras a proveedores"""
+    class Meta:
+        model = Compra
+        fields = ['proveedor', 'inventario', 'cantidad', 'precio_unitario', 'estado', 'fecha_recepcion', 'observaciones']
+        widgets = {
+            'proveedor': forms.Select(attrs={'class': 'form-select'}),
+            'inventario': forms.Select(attrs={'class': 'form-select'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_recepcion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mostrar solo proveedores activos
+        self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')

@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     Cliente, Producto, Inventario, Pedido, 
-    Produccion, MovimientoInventario, PerfilUsuario
+    Produccion, MovimientoInventario, PerfilUsuario,
+    Proveedor, Compra
 )
 
 
@@ -259,6 +260,40 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 50%;" />', obj.foto.url)
         return format_html('<span style="color: #6c757d;">Sin foto</span>')
     foto_thumbnail.short_description = 'Foto'
+    
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'contacto', 'telefono', 'email', 'activo', 'fecha_creacion']
+    list_filter = ['activo', 'fecha_creacion']
+    search_fields = ['nombre', 'contacto', 'email', 'telefono']
+    ordering = ['nombre']
+
+
+@admin.register(Compra)
+class CompraAdmin(admin.ModelAdmin):
+    list_display = ['id', 'proveedor', 'inventario', 'cantidad', 'precio_unitario', 'costo_total', 'estado', 'fecha_creacion', 'fecha_estimada', 'stock_aplicado']
+    list_filter = ['estado', 'fecha_creacion', 'proveedor']
+    search_fields = ['proveedor__nombre', 'inventario__nombre', 'observaciones']
+    readonly_fields = ['costo_total', 'fecha_creacion', 'usuario_registro', 'stock_aplicado']
+    date_hierarchy = 'fecha_creacion'
+
+    fieldsets = (
+        ('Información de la Compra', {
+            'fields': ('proveedor', 'inventario', 'cantidad', 'precio_unitario', 'costo_total')
+        }),
+        ('Fechas y Estado', {
+            'fields': ('estado', 'fecha_estimada', 'fecha_recepcion')
+        }),
+        ('Registro', {
+            'fields': ('usuario_registro', 'stock_aplicado', 'observaciones')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.usuario_registro = request.user
+        super().save_model(request, obj, form, change)
 
 
 # Personalización del sitio de administración

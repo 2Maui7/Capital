@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Compras - Imprenta Capital{% endblock %}
+{% block page_title %}Gestión de Compras{% endblock %}
+{% block page_subtitle %}Pedidos a proveedores{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-truck me-2"></i>Lista de Compras
+        </div>
+        <a href="{% url 'core:compra_crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nueva Compra
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="get" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="Buscar por proveedor, material u observaciones..." value="{{ query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="estado" class="form-select" aria-label="Filtrar por estado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="ordenado" {% if estado_filtro == 'ordenado' %}selected{% endif %}>Ordenado</option>
+                        <option value="recibido" {% if estado_filtro == 'recibido' %}selected{% endif %}>Recibido</option>
+                        <option value="cancelado" {% if estado_filtro == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Filtrar</button>
+                </div>
+            </div>
+        </form>
+        
+        {% if compras %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Proveedor</th>
+                        <th>Material</th>
+                        <th>Cantidad</th>
+                        <th>Costo Unit.</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>F. Creación</th>
+                        
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for compra in compras %}
+                    <tr>
+                        <td><strong>#{{ compra.id }}</strong></td>
+                        <td>{{ compra.proveedor.nombre }}</td>
+                        <td>{{ compra.inventario.nombre }}</td>
+                        <td>{{ compra.cantidad }}</td>
+                        <td>Bs. {{ compra.precio_unitario }}</td>
+                        <td><strong>Bs. {{ compra.costo_total }}</strong></td>
+                        <td>
+                            {% if compra.estado == 'pendiente' %}
+                                <span class="badge bg-secondary">Pendiente</span>
+                            {% elif compra.estado == 'ordenado' %}
+                                <span class="badge bg-info">Ordenado</span>
+                            {% elif compra.estado == 'recibido' %}
+                                <span class="badge bg-success">Recibido</span>
+                            {% else %}
+                                <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ compra.fecha_creacion|date:"d/m/Y" }}</td>
+                        
+                        <td class="d-flex gap-1">
+                            <a href="{% url 'core:compra_editar' compra.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if compra.estado != 'recibido' and compra.estado != 'cancelado' %}
+                            <form method="post" action="{% url 'core:compra_marcar_recibido' compra.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como recibido">
+                                    <i class="bi bi-check2-circle"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox inbox-icon"></i>
+            <p class="text-muted mt-3">
+                {% if query or estado_filtro %}
+                    No se encontraron compras con los filtros aplicados
+                {% else %}
+                    No hay compras registradas
+                {% endif %}
+            </p>
+            <a href="{% url 'core:compra_crear' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Crear Primera Compra
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .fab-reportes {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1030; /* por encima del contenido */
+    }
+    .fab-reportes .btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+        .fab-reportes .icon-lg { font-size: 1.25rem; }
+        .inbox-icon { font-size: 4rem; color: #ccc; }
+</style>
+<div class="fab-reportes">
+    <a href="{% url 'core:compras_reportes' %}" class="btn btn-primary" title="Reportes de Compras">
+            <i class="bi bi-file-earmark-text icon-lg"></i>
+    </a>
+  
+</div>
+        <script>
+            (function(){
+                const form = document.querySelector('form[method="get"]');
+                if (!form) return;
+                const q = form.querySelector('input[name="q"]');
+                const estado = form.querySelector('select[name="estado"]');
+                let t;
+                if (q){
+                    q.addEventListener('input', function(){
+                        if (t) clearTimeout(t);
+                        t = setTimeout(() => form.submit(), 300);
+                    });
+                }
+                if (estado){
+                    estado.addEventListener('change', function(){ form.submit(); });
+                }
+            })();
+        </script>
+{% endblock %}

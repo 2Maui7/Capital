@@ -280,3 +280,85 @@ class PerfilUsuario(models.Model):
     
     def es_empleado(self):
         return self.rol == 'empleado'
+
+
+# ====== COMPRAS (Proveedores y Pedidos a Proveedores) ======
+
+class Proveedor(models.Model):
+    nombre = models.CharField(max_length=255, verbose_name="Nombre del proveedor")
+    contacto = models.CharField(max_length=255, blank=True, null=True, verbose_name="Persona de contacto")
+    telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
+    email = models.EmailField(max_length=255, blank=True, null=True, verbose_name="Correo electrónico")
+    direccion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dirección")
+    activo = models.BooleanField(default=True, verbose_name="Proveedor activo")
+    fecha_creacion = models.DateField(auto_now_add=True, verbose_name="Fecha de registro")
+
+    class Meta:
+        verbose_name = "Proveedor"
+        verbose_name_plural = "Proveedores"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class Compra(models.Model):
+    ESTADOS_COMPRA = [
+        ('pendiente', 'Pendiente'),
+        ('ordenado', 'Ordenado'),
+        ('recibido', 'Recibido'),
+        ('cancelado', 'Cancelado'),
+    ]
+
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='compras', verbose_name="Proveedor")
+    inventario = models.ForeignKey(Inventario, on_delete=models.PROTECT, related_name='compras', verbose_name="Material")
+    cantidad = models.IntegerField(validators=[MinValueValidator(1)], verbose_name="Cantidad")
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))], verbose_name="Costo unitario")
+    costo_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo total")
+
+    estado = models.CharField(max_length=20, choices=ESTADOS_COMPRA, default='pendiente', verbose_name="Estado")
+    fecha_creacion = models.DateField(auto_now_add=True, verbose_name="Fecha de creación")
+    fecha_estimada = models.DateField(blank=True, null=True, verbose_name="Fecha estimada de recepción")
+    fecha_recepcion = models.DateField(blank=True, null=True, verbose_name="Fecha real de recepción")
+
+    observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+    usuario_registro = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='compras_registradas', verbose_name="Registrado por")
+
+    # Bandera para evitar aplicar stock más de una vez
+    stock_aplicado = models.BooleanField(default=False, verbose_name="Stock aplicado")
+
+    class Meta:
+        verbose_name = "Compra a Proveedor"
+        verbose_name_plural = "Compras a Proveedores"
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"Compra #{self.id} - {self.proveedor.nombre} - {self.inventario.nombre}"
+
+    def save(self, *args, **kwargs):
+        # Calcular costo total
+        self.costo_total = (self.precio_unitario or Decimal('0')) * (self.cantidad or 0)
+
+        # Detectar cambio de estado para aplicar stock al recibir
+        estado_anterior = None
+        if self.pk:
+            try:
+                estado_anterior = Compra.objects.only('estado', 'stock_aplicado').get(pk=self.pk).estado
+            except Compra.DoesNotExist:
+                estado_anterior = None
+
+        super().save(*args, **kwargs)
+
+        # Si la compra pasa a recibido y aún no se aplicó stock, crear movimiento de entrada
+        if self.estado == 'recibido' and not self.stock_aplicado:
+            movimiento = MovimientoInventario(
+                inventario=self.inventario,
+                tipo='entrada',
+                cantidad=self.cantidad,
+                motivo=f'Compra #{self.id} recibida',
+                usuario=self.usuario_registro
+            )
+            movimiento.save()
+
+            # Marcar como aplicado para no duplicar
+            Compra.objects.filter(pk=self.pk).update(stock_aplicado=True)

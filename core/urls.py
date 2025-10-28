@@ -26,8 +26,22 @@ urlpatterns = [
     
     # Inventario
     path('inventario/', views.inventario_lista, name='inventario_lista'),
-    path('inventario/crear/', views.inventario_crear, name='inventario_crear'),
+    # La creación de inventario se realiza desde Compras
     
+    # Proveedores
+    path('proveedores/', views.proveedores_lista, name='proveedores_lista'),
+    path('proveedores/crear/', views.proveedor_crear, name='proveedor_crear'),
+    path('proveedores/<int:pk>/editar/', views.proveedor_editar, name='proveedor_editar'),
+    path('proveedores/<int:pk>/eliminar/', views.proveedor_eliminar, name='proveedor_eliminar'),
+
+    # Compras
+    path('compras/', views.compras_lista, name='compras_lista'),
+    path('compras/crear/', views.compra_crear, name='compra_crear'),
+    path('compras/<int:pk>/editar/', views.compra_editar, name='compra_editar'),
+    path('compras/<int:pk>/eliminar/', views.compra_eliminar, name='compra_eliminar'),
+    path('compras/<int:pk>/recibir/', views.compra_marcar_recibido, name='compra_marcar_recibido'),
+    path('compras/reportes/', views.compras_reportes, name='compras_reportes'),
+
     # Producción
     path('produccion/', views.produccion_panel, name='produccion_panel'),
     path('produccion/<int:pk>/iniciar/', views.produccion_iniciar, name='produccion_iniciar'),

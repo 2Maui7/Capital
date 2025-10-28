@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Compra - Imprenta Capital{% endblock %}
+{% block page_title %}{{ accion }} Compra{% endblock %}
+{% block page_subtitle %}Formulario de compra a proveedor{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-truck me-2"></i>{{ accion }} Compra
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div id="proveedor_main_wrapper" class="col-md-6 mb-3">
+                            <label for="{{ form.proveedor.id_for_label }}" class="form-label">Proveedor *</label>
+                            {{ form.proveedor }}
+                            {% if form.proveedor.errors %}
+                                <div class="text-danger small">{{ form.proveedor.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.inventario.id_for_label }}" class="form-label">Material *</label>
+                            {{ form.inventario }}
+                            {% if form.inventario.errors %}
+                                <div class="text-danger small">{{ form.inventario.errors }}</div>
+                            {% endif %}
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="materialNuevoChk" name="material_nuevo">
+                                <label class="form-check-label" for="materialNuevoChk">
+                                    Material nuevo (no existe en inventario)
+                                </label>
+                            </div>
+                            <div id="proveedorSugerido" class="form-text text-muted"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div id="cantidad_main_wrapper" class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">Cantidad *</label>
+                            {{ form.cantidad }}
+                            {% if form.cantidad.errors %}
+                                <div class="text-danger small">{{ form.cantidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div id="precio_main_wrapper" class="col-md-4 mb-3">
+                            <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">Costo Unitario *</label>
+                            {{ form.precio_unitario }}
+                            {% if form.precio_unitario.errors %}
+                                <div class="text-danger small">{{ form.precio_unitario.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">Estado</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="text-danger small">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_recepcion.id_for_label }}" class="form-label">Fecha de Recepción</label>
+                            {{ form.fecha_recepcion }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label">Observaciones</label>
+                        {{ form.observaciones }}
+                    </div>
+
+                    <!-- Sección Material Nuevo -->
+                    <div id="materialNuevoSection" class="border rounded p-3 bg-light mb-3 d-none">
+                        <h6 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Datos del nuevo material</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="nombre_material">Nombre del material *</label>
+                                <input class="form-control" type="text" id="nombre_material" name="nombre_material" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="proveedor_material">Proveedor</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="proveedor_material" name="proveedor_material">
+                                        <option value="">— Selecciona —</option>
+                                        {% for nombre in proveedores_nombres %}
+                                        <option value="{{ nombre }}">{{ nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <a class="btn btn-outline-primary" href="{% url 'core:proveedor_crear' %}" title="Nuevo proveedor">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="unidad_material">Unidad</label>
+                                <select class="form-select" id="unidad_material" name="unidad_material">
+                                    <option value="unidad">Unidad</option>
+                                    <option value="kg">Kilogramo</option>
+                                    <option value="litro">Litro</option>
+                                    <option value="resma">Resma</option>
+                                    <option value="caja">Caja</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="cantidad_minima_material">Cantidad mínima</label>
+                                <input class="form-control" type="number" id="cantidad_minima_material" name="cantidad_minima_material" value="10" min="1" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="descripcion_material">Descripción</label>
+                                <textarea class="form-control" id="descripcion_material" name="descripcion_material" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="cantidad_material_compra">Cantidad *</label>
+                                <input class="form-control" type="number" id="cantidad_material_compra" min="1" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="precio_unitario_material">Precio unitario (sugerido)</label>
+                                <input class="form-control" type="number" step="0.01" min="0" id="precio_unitario_material" name="precio_unitario_material" />
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <small>Este material se creará con cantidad 0. El stock se incrementará cuando la compra sea marcada como <strong>recibido</strong>.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'core:compras_lista' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Guardar Compra
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Información
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">Notas:</h6>
+                <ul class="small">
+                    <li>Al marcar una compra como <strong>recibido</strong>, el stock del material se incrementa automáticamente.</li>
+                    <li>Se registra un <em>Movimiento de Inventario</em> de tipo <strong>entrada</strong> asociado a la compra.</li>
+                    <li>El costo total se calcula automáticamente (cantidad × costo unitario).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% block extra_js %}
+<script>
+    (function(){
+        const chk = document.getElementById('materialNuevoChk');
+        const section = document.getElementById('materialNuevoSection');
+        const inventarioSelect = document.getElementById('{{ form.inventario.auto_id }}');
+    const precioCompraInput = document.getElementById('{{ form.precio_unitario.auto_id }}');
+    const proveedorMainWrapper = document.getElementById('proveedor_main_wrapper');
+    const proveedorMainSelect = document.getElementById('{{ form.proveedor.auto_id }}');
+        const precioMainWrapper = document.getElementById('precio_main_wrapper');
+        const cantidadMainWrapper = document.getElementById('cantidad_main_wrapper');
+        const cantidadMainInput = document.getElementById('{{ form.cantidad.auto_id }}');
+    const proveedorSugeridoEl = document.getElementById('proveedorSugerido');
+    const proveedorNuevoInput = document.getElementById('proveedor_material');
+    const precioUnitNuevoInput = document.getElementById('precio_unitario_material');
+        const cantidadNuevoInput = document.getElementById('cantidad_material_compra');
+        const dataScript = document.getElementById('inventarios-data');
+        let inventarios = [];
+        try { inventarios = JSON.parse((dataScript && dataScript.textContent) || '[]'); } catch(e) { inventarios = []; }
+        const map = {};
+    for (const it of inventarios) { map[String(it.id)] = it; }
+
+        // Campos de material nuevo
+        const nuevoFields = [
+            document.getElementById('nombre_material'),
+            document.getElementById('proveedor_material'),
+            document.getElementById('unidad_material'),
+            document.getElementById('cantidad_minima_material'),
+            document.getElementById('descripcion_material'),
+            document.getElementById('precio_unitario_material')
+        ];
+
+        function setDisabled(el, disabled){ if (el) el.disabled = !!disabled; }
+        function setRequired(el, required){ if (el) el.required = !!required; }
+        function setValue(el, value){ if (el) el.value = value; }
+        function selectOptionByText(selectEl, text){
+            if (!selectEl) return false;
+            const t = (text || '').trim().toLowerCase();
+            if (!t) return false;
+            for (let i = 0; i < selectEl.options.length; i++){
+                const optText = (selectEl.options[i].textContent || '').trim().toLowerCase();
+                if (optText === t){ selectEl.selectedIndex = i; return true; }
+            }
+            return false;
+        }
+        function syncProveedorToMain(){
+            if (!proveedorNuevoInput || !proveedorMainSelect) return;
+            const idx = proveedorNuevoInput.selectedIndex;
+            const selectedText = idx >= 0 ? (proveedorNuevoInput.options[idx].textContent || '').trim() : '';
+            if (!selectedText) return;
+            // Buscar por texto en el select principal y asignar su value (id)
+            for (let i = 0; i < proveedorMainSelect.options.length; i++){
+                const t = (proveedorMainSelect.options[i].textContent || '').trim();
+                if (t === selectedText){
+                    proveedorMainSelect.value = proveedorMainSelect.options[i].value;
+                    break;
+                }
+            }
+        }
+
+        function toggleSection(){
+            const creatingNew = chk.checked;
+            // Mostrar/ocultar sección
+            if (creatingNew) { section.classList.remove('d-none'); } else { section.classList.add('d-none'); }
+            // Deshabilitar/limitar campos en función del modo
+            if (creatingNew){
+                // Si se crea material nuevo, bloquear selección de inventario para evitar inconsistencias
+                setDisabled(inventarioSelect, true);
+                // Requerir campos mínimos del nuevo material
+                setRequired(nuevoFields[0], true); // nombre_material
+                setRequired(nuevoFields[2], false); // unidad opcional
+                setRequired(nuevoFields[3], false); // cantidad_minima opcional
+
+                // Ocultar campos principales de cantidad y precio, usar los de sección
+                if (precioMainWrapper) precioMainWrapper.classList.add('d-none');
+                if (cantidadMainWrapper) cantidadMainWrapper.classList.add('d-none');
+                if (cantidadNuevoInput) {
+                    cantidadNuevoInput.disabled = false;
+                    cantidadNuevoInput.required = true;
+                    // sincronizar desde principal si tiene valor
+                    if (cantidadMainInput && cantidadMainInput.value && !cantidadNuevoInput.value){
+                        cantidadNuevoInput.value = cantidadMainInput.value;
+                    }
+                }
+                // sincronizar precio nuevo hacia el principal (oculto)
+                if (precioUnitNuevoInput && precioCompraInput && !precioUnitNuevoInput.value && precioCompraInput.value){
+                    precioUnitNuevoInput.value = precioCompraInput.value;
+                }
+
+                // Ocultar proveedor principal y sincronizar con el proveedor de material nuevo
+                if (proveedorMainWrapper) proveedorMainWrapper.classList.add('d-none');
+                syncProveedorToMain();
+            } else {
+                // Habilitar inventario y limpiar valores de la sección nueva
+                setDisabled(inventarioSelect, false);
+                for (const f of nuevoFields){ setDisabled(f, true); setRequired(f, false); setValue(f, ''); }
+                // Mostrar campos principales y deshabilitar los de sección
+                if (precioMainWrapper) precioMainWrapper.classList.remove('d-none');
+                if (cantidadMainWrapper) cantidadMainWrapper.classList.remove('d-none');
+                if (cantidadNuevoInput){ cantidadNuevoInput.disabled = true; cantidadNuevoInput.required = false; }
+                // Mostrar proveedor principal
+                if (proveedorMainWrapper) proveedorMainWrapper.classList.remove('d-none');
+            }
+            // Habilitar campos de nuevo material sólo cuando corresponde
+            for (const f of nuevoFields){ setDisabled(f, !creatingNew); }
+
+            // Mostrar/ocultar sugerencia de proveedor solo cuando está activo Material nuevo
+            if (proveedorSugeridoEl){
+                if (creatingNew) {
+                    proveedorSugeridoEl.classList.remove('d-none');
+                } else {
+                    proveedorSugeridoEl.classList.add('d-none');
+                    proveedorSugeridoEl.textContent = '';
+                }
+            }
+        }
+        if (chk) {
+            chk.addEventListener('change', toggleSection);
+            toggleSection();
+        }
+
+        function autocompletarDesdeInventario(){
+            const sel = inventarioSelect.value;
+            const item = sel ? map[String(sel)] : null;
+            if (item){
+                // Autocompletar precio de compra si vacío
+                if (precioCompraInput && (!precioCompraInput.value || Number(precioCompraInput.value) === 0)){
+                    precioCompraInput.value = item.precio_unitario ?? '';
+                }
+                // Sugerir proveedor bajo el select sólo si está activo Material nuevo
+                if (proveedorSugeridoEl){
+                    if (chk && chk.checked) {
+                        proveedorSugeridoEl.textContent = item.proveedor ? `Proveedor sugerido: ${item.proveedor}` : '';
+                    } else {
+                        proveedorSugeridoEl.textContent = '';
+                    }
+                }
+                // Si se está creando material nuevo, prellenar proveedor y precio sugeridos si vacíos
+                if (chk && chk.checked){
+                    if (proveedorNuevoInput && (!proveedorNuevoInput.value || proveedorNuevoInput.selectedIndex <= 0)){
+                        // Seleccionar proveedor por nombre en el select de material nuevo
+                        selectOptionByText(proveedorNuevoInput, item.proveedor || '');
+                        syncProveedorToMain();
+                    }
+                    if (precioUnitNuevoInput && (!precioUnitNuevoInput.value || Number(precioUnitNuevoInput.value) === 0)){
+                        precioUnitNuevoInput.value = item.precio_unitario ?? '';
+                        // también sincronizar al campo principal oculto
+                        if (precioCompraInput){ precioCompraInput.value = precioUnitNuevoInput.value || ''; }
+                    }
+                }
+            } else {
+                if (proveedorSugeridoEl){ proveedorSugeridoEl.textContent = ''; }
+            }
+        }
+        if (inventarioSelect){
+            inventarioSelect.addEventListener('change', autocompletarDesdeInventario);
+            autocompletarDesdeInventario();
+        }
+
+        // Sincronizar cantidad y precio entre sección nueva y campos principales
+        if (cantidadNuevoInput && cantidadMainInput){
+            cantidadNuevoInput.addEventListener('input', function(){
+                if (chk && chk.checked){ cantidadMainInput.value = this.value; }
+            });
+        }
+        if (precioUnitNuevoInput && precioCompraInput){
+            precioUnitNuevoInput.addEventListener('input', function(){
+                if (chk && chk.checked){ precioCompraInput.value = this.value; }
+            });
+        }
+        if (proveedorNuevoInput){
+            proveedorNuevoInput.addEventListener('change', function(){
+                if (chk && chk.checked){ syncProveedorToMain(); }
+            });
+        }
+    })();
+</script>
+<script id="inventarios-data" type="application/json">{{ inventarios_json|default:'[]'|safe }}</script>
+{% endblock %}
+{% endblock %}

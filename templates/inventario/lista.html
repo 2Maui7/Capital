@@ -10,8 +10,8 @@
         <div>
             <i class="bi bi-box-seam me-2"></i>Inventario de Materiales
         </div>
-        <a href="{% url 'core:inventario_crear' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Material
+        <a href="{% url 'core:compra_crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nueva Compra
         </a>
     </div>
     <div class="card-body">
@@ -74,9 +74,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% endif %}
-                                <button class="btn btn-outline-success" title="Registrar entrada" data-bs-toggle="modal" data-bs-target="#movimientoModal" data-material="{{ material.id }}" data-nombre="{{ material.nombre }}">
-                                    <i class="bi bi-plus-circle"></i>
-                                </button>
+                                <!-- Registrar entrada manual deshabilitado: sólo se incrementa stock vía Compras -->
                             </div>
                         </td>
                     </tr>
@@ -117,8 +115,8 @@
         <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No hay materiales en el inventario</p>
-            <a href="{% url 'core:inventario_crear' %}" class="btn btn-primary mt-2">
-                <i class="bi bi-plus-circle me-2"></i>Agregar Primer Material
+            <a href="{% url 'core:compra_crear' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Crear Primera Compra
             </a>
         </div>
         {% endif %}
