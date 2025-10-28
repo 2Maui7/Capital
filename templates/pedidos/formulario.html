@@ -77,7 +77,7 @@
                         {% endif %}
                     </div>
                     
-                    <!-- Especificaciones Técnicas eliminadas -->
+                    
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -145,16 +145,13 @@
 {% block extra_js %}
   <script type="application/json" id="productos-data-json">{{ productos_data_json|default:'[]'|safe }}</script>
   <script>
-  // Autocompletar precio unitario al seleccionar un producto
   (function(){
     const selectProducto = document.getElementById('{{ form.inventario.id_for_label }}') || document.getElementById('id_inventario');
       const inputPrecio = document.getElementById('{{ form.precio_unitario.id_for_label }}') || document.getElementById('id_precio_unitario');
       const inputCantidad = document.getElementById('{{ form.cantidad.id_for_label }}') || document.getElementById('id_cantidad');
       const inputDescuento = document.getElementById('{{ form.descuento.id_for_label }}') || document.getElementById('id_descuento');
       const spanTotal = document.getElementById('total-estimado');
-    // Sin campo de filtro: el select ya incluye todos los productos
       try {
-          // Datos de productos inyectados desde el servidor
           const productosData = JSON.parse(document.getElementById('productos-data-json').textContent);
           const mapPrecios = new Map(productosData.map(p => [String(p.id), p.precio_unitario]));
 
@@ -173,7 +170,6 @@
           function normalizarNumero(val){
               if (typeof val === 'number') return val;
               if (!val) return 0;
-              // Reemplazar coma por punto por si el navegador/localidad lo usa
               const v = String(val).replace(',', '.');
               const n = parseFloat(v);
               return isNaN(n) ? 0 : n;
@@ -191,24 +187,19 @@
 
           if (selectProducto && inputPrecio) {
               selectProducto.addEventListener('change', actualizarPrecio);
-              // Autollenar si hay producto ya seleccionado y el precio está vacío
               if (inputPrecio.value === '' || Number(inputPrecio.value) === 0) {
                   actualizarPrecio();
               }
           }
 
-          // Eventos para cálculo en tiempo real
           inputPrecio?.addEventListener('input', calcularTotal);
           inputCantidad?.addEventListener('input', calcularTotal);
           inputDescuento?.addEventListener('input', calcularTotal);
-          // Inicializar total
           calcularTotal();
-
-          // No hay filtro: se listan todos los productos en el select
       } catch (e) {
           console.warn('No se pudo inicializar autocompletado de precio:', e);
       }
   })();
   </script>
 {% endblock %}
-{# bloque extra_js duplicado eliminado #}
+

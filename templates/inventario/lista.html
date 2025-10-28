@@ -15,7 +15,6 @@
         </a>
     </div>
     <div class="card-body">
-        <!-- Filtros -->
         <form method="get" class="mb-3">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="f-ocultar-agotados" name="ocultar_agotados" value="1" {% if ocultar_agotados %}checked{% endif %}>
@@ -82,7 +81,6 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% endif %}
-                                <!-- Registrar entrada manual deshabilitado: sólo se incrementa stock vía Compras -->
                             </div>
                         </td>
                     </tr>
@@ -91,7 +89,6 @@
             </table>
         </div>
         
-        <!-- Estadísticas -->
         <div class="row mt-4">
             <div class="col-md-4">
                 <div class="card bg-success text-white">
@@ -131,7 +128,6 @@
     </div>
 </div>
 
-<!-- Alerta de materiales críticos -->
 {% for material in inventario %}
     {% if material.necesita_reposicion %}
     <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">

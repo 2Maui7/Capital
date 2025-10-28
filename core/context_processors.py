@@ -1,8 +1,4 @@
 def user_profile(request):
-    """
-    Context processor para agregar información del perfil del usuario
-    a todos los templates
-    """
     context = {
         'es_administrador': False,
         'es_empleado': False,

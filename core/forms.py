@@ -5,7 +5,6 @@ from .models import Cliente, Producto, Pedido, Inventario, Proveedor, Compra, Tr
 
 
 class LoginForm(AuthenticationForm):
-    """Formulario de inicio de sesión personalizado"""
     username = forms.CharField(
         widget=forms.TextInput(attrs={
             'class': 'form-control',
@@ -21,7 +20,6 @@ class LoginForm(AuthenticationForm):
 
 
 class ClienteForm(forms.ModelForm):
-    """Formulario para gestión de clientes"""
     class Meta:
         model = Cliente
         fields = ['nombre', 'nit_ci', 'telefono', 'email', 'direccion']
@@ -35,7 +33,6 @@ class ClienteForm(forms.ModelForm):
 
 
 class PedidoForm(forms.ModelForm):
-    """Formulario para gestión de pedidos"""
     class Meta:
         model = Pedido
         fields = ['cliente', 'inventario', 'cantidad', 'descripcion',
@@ -53,16 +50,12 @@ class PedidoForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Asegurar que el selector muestre solo materiales disponibles (cantidad > 0).
-        # En modo edición, incluir también el material actual aunque tenga 0 para no invalidar el formulario.
         if self.instance and getattr(self.instance, 'inventario_id', None):
             qs = Inventario.objects.filter(Q(cantidad__gt=0) | Q(pk=self.instance.inventario_id)).order_by('nombre')
         else:
             qs = Inventario.objects.filter(cantidad__gt=0).order_by('nombre')
         self.fields['inventario'].queryset = qs
-        # Mostrar como listbox con varias filas visibles para hacer evidente que hay más opciones
         self.fields['inventario'].widget.attrs.update({'size': '12'})
-        # Si hay un cliente seleccionado, aplicar descuento automáticamente
         if self.instance and self.instance.pk and hasattr(self.instance, 'cliente'):
             try:
                 self.initial['descuento'] = self.instance.cliente.obtener_descuento()
@@ -74,7 +67,6 @@ class PedidoForm(forms.ModelForm):
 
 
 class TrabajoForm(forms.ModelForm):
-    """Formulario para gestión de trabajos (productos/servicios)"""
     class Meta:
         model = Trabajo
         fields = ['cliente', 'producto', 'cantidad', 'descripcion', 'precio_unitario', 'descuento', 'fecha_entrega', 'estado']
@@ -91,11 +83,8 @@ class TrabajoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Mostrar solo productos activos
         self.fields['producto'].queryset = Producto.objects.filter(activo=True).order_by('nombre')
-        # Mostrar como listbox alto
         self.fields['producto'].widget.attrs.update({'size': '12'})
-        # Descuento automático si aplica
         if self.instance and self.instance.pk and hasattr(self.instance, 'cliente'):
             try:
                 self.initial['descuento'] = self.instance.cliente.obtener_descuento()
@@ -104,7 +93,6 @@ class TrabajoForm(forms.ModelForm):
 
  
 class ProveedorForm(forms.ModelForm):
-    """Formulario para gestión de proveedores"""
     class Meta:
         model = Proveedor
         fields = ['nombre', 'contacto', 'telefono', 'email', 'direccion', 'activo']
@@ -119,7 +107,6 @@ class ProveedorForm(forms.ModelForm):
 
 
 class CompraForm(forms.ModelForm):
-    """Formulario para compras a proveedores"""
     class Meta:
         model = Compra
         fields = ['proveedor', 'inventario', 'cantidad', 'precio_unitario', 'estado', 'fecha_recepcion', 'observaciones']
@@ -135,6 +122,5 @@ class CompraForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Mostrar solo proveedores activos
         self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
 

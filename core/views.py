@@ -17,11 +17,7 @@ from .forms import (
 )
 from .decorators import administrador_o_empleado, solo_administrador
 
-
-# ============= VISTAS DE AUTENTICACIÓN =============
-
 def user_login(request):
-    """Vista de inicio de sesión"""
     if request.user.is_authenticated:
         return redirect('core:dashboard')
     
@@ -45,52 +41,40 @@ def user_login(request):
 
 @login_required
 def user_logout(request):
-    """Vista de cierre de sesión"""
     logout(request)
     messages.info(request, 'Has cerrado sesión correctamente')
     return redirect('core:login')
 
 
-# ============= DASHBOARD Y VISTAS PRINCIPALES =============
-
 @login_required
 @administrador_o_empleado
 def dashboard(request):
-    """Dashboard principal con estadísticas"""
-    # Estadísticas generales
+    
     total_clientes = Cliente.objects.count()
     total_productos = Producto.objects.filter(activo=True).count()
     
-    # Pedidos
     pedidos_pendientes = Pedido.objects.filter(estado='pendiente').count()
     pedidos_en_produccion = Pedido.objects.filter(estado='en_produccion').count()
     pedidos_hoy = Pedido.objects.filter(fecha_creacion=timezone.now().date()).count()
     
-    # Trabajos (productos/servicios)
     trabajos_pendientes = Trabajo.objects.filter(estado='pendiente').count()
     trabajos_en_produccion = Trabajo.objects.filter(estado='en_produccion').count()
     trabajos_hoy = Trabajo.objects.filter(fecha_creacion=timezone.now().date()).count()
     
-    # Compras
     compras_pendientes = Compra.objects.filter(estado='pendiente').count()
     compras_ordenadas = Compra.objects.filter(estado='ordenado').count()
     compras_recibidas = Compra.objects.filter(estado='recibido').count()
     
-    # Inventario con alertas
     from django.db.models import F
     materiales_bajo_stock = Inventario.objects.filter(
         cantidad__lte=F('cantidad_minima')
     ).count()
     
-    # Producción
     produccion_activa = Produccion.objects.filter(estado='en_proceso').count()
     
-    # Últimos pedidos
     ultimos_pedidos = Pedido.objects.select_related('cliente', 'inventario').order_by('-fecha_creacion')[:5]
-    # Últimos trabajos
     ultimos_trabajos = Trabajo.objects.select_related('cliente', 'producto').order_by('-fecha_creacion')[:5]
     
-    # Materiales críticos
     materiales_criticos = Inventario.objects.filter(
         cantidad__lte=F('cantidad_minima')
     ).order_by('cantidad')[:5]
@@ -117,12 +101,9 @@ def dashboard(request):
     return render(request, 'dashboard/index.html', context)
 
 
-# ============= GESTIÓN DE CLIENTES =============
-
 @login_required
 @administrador_o_empleado
 def clientes_lista(request):
-    """Lista de clientes"""
     query = request.GET.get('q', '')
     clientes = Cliente.objects.all()
     
@@ -142,7 +123,6 @@ def clientes_lista(request):
 @login_required
 @administrador_o_empleado
 def cliente_crear(request):
-    """Crear nuevo cliente"""
     if request.method == 'POST':
         form = ClienteForm(request.POST)
         if form.is_valid():
@@ -158,7 +138,6 @@ def cliente_crear(request):
 @login_required
 @administrador_o_empleado
 def cliente_editar(request, pk):
-    """Editar cliente existente"""
     cliente = get_object_or_404(Cliente, pk=pk)
     
     if request.method == 'POST':
@@ -176,7 +155,6 @@ def cliente_editar(request, pk):
 @login_required
 @solo_administrador
 def cliente_eliminar(request, pk):
-    """Eliminar cliente"""
     cliente = get_object_or_404(Cliente, pk=pk)
     
     if request.method == 'POST':
@@ -188,12 +166,9 @@ def cliente_eliminar(request, pk):
     return render(request, 'clientes/eliminar.html', {'cliente': cliente})
 
 
-# ============= GESTIÓN DE PEDIDOS =============
-
 @login_required
 @administrador_o_empleado
 def pedidos_lista(request):
-    """Lista de pedidos"""
     estado_filtro = request.GET.get('estado', '')
     query = request.GET.get('q', '')
     
@@ -218,12 +193,9 @@ def pedidos_lista(request):
     })
 
 
-# ============= TRABAJOS (Productos/Servicios) =============
-
 @login_required
 @administrador_o_empleado
 def trabajos_lista(request):
-    """Lista de trabajos (productos/servicios)"""
     estado_filtro = request.GET.get('estado', '')
     query = request.GET.get('q', '')
 
@@ -251,7 +223,6 @@ def trabajos_lista(request):
 @login_required
 @administrador_o_empleado
 def trabajo_crear(request):
-    """Crear nuevo trabajo"""
     if request.method == 'POST':
         form = TrabajoForm(request.POST)
         if form.is_valid():
@@ -278,7 +249,6 @@ def trabajo_crear(request):
 @login_required
 @administrador_o_empleado
 def trabajo_editar(request, pk):
-    """Editar trabajo existente"""
     trabajo = get_object_or_404(Trabajo, pk=pk)
 
     if request.method == 'POST':
@@ -306,7 +276,6 @@ def trabajo_editar(request, pk):
 @login_required
 @administrador_o_empleado
 def trabajo_detalle(request, pk):
-    """Detalle de trabajo"""
     trabajo = get_object_or_404(Trabajo, pk=pk)
     return render(request, 'trabajos/detalle.html', {'trabajo': trabajo})
 
@@ -314,7 +283,6 @@ def trabajo_detalle(request, pk):
 @login_required
 @solo_administrador
 def trabajo_eliminar(request, pk):
-    """Eliminar trabajo (solo administradores)"""
     trabajo = get_object_or_404(Trabajo, pk=pk)
     if request.method == 'POST':
         trabajo_id = trabajo.id
@@ -327,7 +295,6 @@ def trabajo_eliminar(request, pk):
 @login_required
 @administrador_o_empleado
 def pedido_crear(request):
-    """Crear nuevo pedido"""
     if request.method == 'POST':
         form = PedidoForm(request.POST)
         if form.is_valid():
@@ -339,7 +306,6 @@ def pedido_crear(request):
     else:
         form = PedidoForm()
 
-    # Datos de productos para autocompletar precio (id, precio_unitario)
     from django.core.serializers.json import DjangoJSONEncoder
     import json
     qs_inv = Inventario.objects.filter(cantidad__gt=0)
@@ -358,7 +324,6 @@ def pedido_crear(request):
 @login_required
 @administrador_o_empleado
 def pedido_editar(request, pk):
-    """Editar pedido existente"""
     pedido = get_object_or_404(Pedido, pk=pk)
     
     if request.method == 'POST':
@@ -389,7 +354,6 @@ def pedido_editar(request, pk):
 @login_required
 @administrador_o_empleado
 def pedido_detalle(request, pk):
-    """Ver detalle del pedido"""
     pedido = get_object_or_404(Pedido, pk=pk)
     return render(request, 'pedidos/detalle.html', {'pedido': pedido})
 
@@ -397,7 +361,6 @@ def pedido_detalle(request, pk):
 @login_required
 @solo_administrador
 def pedido_eliminar(request, pk):
-    """Eliminar pedido (solo administradores)"""
     pedido = get_object_or_404(Pedido, pk=pk)
     
     if request.method == 'POST':
@@ -409,12 +372,9 @@ def pedido_eliminar(request, pk):
     return render(request, 'pedidos/eliminar.html', {'pedido': pedido})
 
 
-# ============= GESTIÓN DE INVENTARIO =============
-
 @login_required
 @administrador_o_empleado
 def inventario_lista(request):
-    """Lista de materiales en inventario"""
     ocultar_agotados = request.GET.get('ocultar_agotados') in ['1', 'true', 'on']
     qs = Inventario.objects.all()
     if ocultar_agotados:
@@ -427,14 +387,9 @@ def inventario_lista(request):
 
 
  
-
-
-# ============= PANEL DE PRODUCCIÓN =============
-
 @login_required
 @administrador_o_empleado
 def produccion_panel(request):
-    """Panel de producción"""
     producciones = Produccion.objects.select_related('pedido__cliente', 'empleado').exclude(
         estado='terminado'
     ).order_by('-fecha_inicio')
@@ -445,7 +400,6 @@ def produccion_panel(request):
 @login_required
 @administrador_o_empleado
 def produccion_iniciar(request, pk):
-    """Iniciar producción"""
     produccion = get_object_or_404(Produccion, pk=pk)
     
     if request.method == 'POST':
@@ -456,11 +410,8 @@ def produccion_iniciar(request, pk):
     return render(request, 'produccion/iniciar.html', {'produccion': produccion})
 
 
-# ============= API ENDPOINTS =============
-
 @api_view(['GET'])
 def api_status(request):
-    """Endpoint para verificar el estado de la API"""
     return Response({
         'status': 'online',
         'message': 'API de Imprenta Capital funcionando correctamente',
@@ -471,7 +422,6 @@ def api_status(request):
 @api_view(['GET'])
 @login_required
 def api_dashboard_stats(request):
-    """API para obtener estadísticas del dashboard"""
     from django.db.models import F
     
     stats = {
@@ -509,7 +459,6 @@ def api_dashboard_stats(request):
 @login_required
 @administrador_o_empleado
 def compra_marcar_recibido(request, pk):
-    """Marcar una compra como recibida y actualizar stock"""
     compra = get_object_or_404(Compra, pk=pk)
     if request.method == 'POST':
         from django.utils import timezone
@@ -521,12 +470,9 @@ def compra_marcar_recibido(request, pk):
     return redirect('core:compras_lista')
 
 
-# ============= PROVEEDORES =============
-
 @login_required
 @administrador_o_empleado
 def proveedores_lista(request):
-    """Lista de proveedores"""
     query = request.GET.get('q', '')
     proveedores = Proveedor.objects.all()
     if query:
@@ -543,7 +489,6 @@ def proveedores_lista(request):
 @login_required
 @administrador_o_empleado
 def proveedor_crear(request):
-    """Crear nuevo proveedor"""
     if request.method == 'POST':
         form = ProveedorForm(request.POST)
         if form.is_valid():
@@ -558,7 +503,6 @@ def proveedor_crear(request):
 @login_required
 @administrador_o_empleado
 def proveedor_editar(request, pk):
-    """Editar proveedor"""
     proveedor = get_object_or_404(Proveedor, pk=pk)
     if request.method == 'POST':
         form = ProveedorForm(request.POST, instance=proveedor)
@@ -574,7 +518,6 @@ def proveedor_editar(request, pk):
 @login_required
 @solo_administrador
 def proveedor_eliminar(request, pk):
-    """Eliminar proveedor (solo administradores)"""
     proveedor = get_object_or_404(Proveedor, pk=pk)
     if request.method == 'POST':
         nombre = proveedor.nombre
@@ -584,12 +527,9 @@ def proveedor_eliminar(request, pk):
     return render(request, 'proveedores/eliminar.html', {'proveedor': proveedor})
 
 
-# ============= COMPRAS =============
-
 @login_required
 @administrador_o_empleado
 def compras_lista(request):
-    """Lista de compras a proveedores"""
     estado_filtro = request.GET.get('estado', '')
     query = request.GET.get('q', '')
     compras = Compra.objects.select_related('proveedor', 'inventario').all()
@@ -612,15 +552,12 @@ def compras_lista(request):
 @login_required
 @administrador_o_empleado
 def compra_crear(request):
-    """Crear nueva compra"""
     if request.method == 'POST':
-        # Detectar si se crea material nuevo primero
         material_nuevo = request.POST.get('material_nuevo') in ['on', 'true', '1']
         if material_nuevo:
             nombre = request.POST.get('nombre_material')
             if not nombre:
                 messages.error(request, 'Debes ingresar el nombre del nuevo material.')
-                # Mostrar formulario nuevamente
                 form = CompraForm(request.POST)
                 return render(request, 'compras/formulario.html', {
                     'form': form,
@@ -635,7 +572,6 @@ def compra_crear(request):
             proveedor_txt = request.POST.get('proveedor_material') or ''
             precio_unit_material = Decimal(request.POST.get('precio_unitario_material') or '0')
 
-            # Crear inventario primero para poder validar el formulario con referencia válida
             inv = Inventario.objects.create(
                 nombre=nombre,
                 descripcion=descripcion,
@@ -645,7 +581,6 @@ def compra_crear(request):
                 proveedor=proveedor_txt,
                 precio_unitario=precio_unit_material,
             )
-            # Inyectar el id de inventario creado en los datos del formulario
             post_data = request.POST.copy()
             post_data['inventario'] = str(inv.id)
             form = CompraForm(post_data)
@@ -656,7 +591,6 @@ def compra_crear(request):
                 messages.success(request, f'Compra #{compra.id} creada exitosamente')
                 return redirect('core:compras_lista')
             else:
-                # Si el formulario no es válido, eliminar el inventario creado para evitar huérfanos
                 inv.delete()
                 return render(request, 'compras/formulario.html', {
                     'form': form,
@@ -686,10 +620,8 @@ def compra_crear(request):
 @login_required
 @administrador_o_empleado
 def compra_editar(request, pk):
-    """Editar compra"""
     compra = get_object_or_404(Compra, pk=pk)
     if request.method == 'POST':
-        # Permitir crear material nuevo también al editar
         material_nuevo = request.POST.get('material_nuevo') in ['on', 'true', '1']
         if material_nuevo:
             nombre = request.POST.get('nombre_material')
@@ -757,7 +689,6 @@ def compra_editar(request, pk):
 @login_required
 @solo_administrador
 def compra_eliminar(request, pk):
-    """Eliminar compra (solo administradores)"""
     compra = get_object_or_404(Compra, pk=pk)
     if request.method == 'POST':
         compra_id = compra.id
@@ -770,14 +701,12 @@ def compra_eliminar(request, pk):
 @login_required
 @administrador_o_empleado
 def compras_reportes(request):
-    """Página de reportes de compras con filtros y exporte a PDF"""
     from django.utils.dateparse import parse_date
     from django.http import HttpResponse
     from io import BytesIO
 
     qs = Compra.objects.select_related('proveedor', 'inventario').all()
 
-    # Filtros
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     estado = request.GET.get('estado')
@@ -793,7 +722,6 @@ def compras_reportes(request):
     if estado:
         qs = qs.filter(estado=estado)
 
-    # Resumen
     resumen = {
         'total': qs.count(),
         'pendientes': qs.filter(estado='pendiente').count(),
@@ -803,7 +731,6 @@ def compras_reportes(request):
         'costo_total': qs.aggregate(total=Sum('costo_total'))['total'] or Decimal('0'),
     }
 
-    # Exportar solo PDF
     export = request.GET.get('export')
     if export == 'pdf':
         try:
@@ -818,16 +745,14 @@ def compras_reportes(request):
             doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
             elements = []
             styles = getSampleStyleSheet()
-
-            # Título y filtros
+            
             title = Paragraph('Reporte de Compras', styles['Title'])
             elements.append(title)
             elements.append(Spacer(1, 8))
             filtros_txt = f"Rango: {start_date or '-'} a {end_date or '-'} | Estado: {estado or 'Todos'}"
             elements.append(Paragraph(filtros_txt, styles['Normal']))
             elements.append(Spacer(1, 12))
-
-            # Resumen
+            
             res_data = [
                 ['Total', 'Pendientes', 'Ordenadas', 'Recibidas', 'Canceladas', 'Costo Total (Bs.)'],
                 [
@@ -850,8 +775,7 @@ def compras_reportes(request):
             ]))
             elements.append(res_table)
             elements.append(Spacer(1, 16))
-
-            # Tabla de compras
+            
             headers = ['ID', 'Proveedor', 'Material', 'Cant.', 'Unit.', 'Total', 'Estado', 'F. Creación', 'F. Recepción']
             data = [headers]
             for c in qs.order_by('-fecha_creacion'):

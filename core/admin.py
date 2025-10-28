@@ -143,7 +143,7 @@ class PedidoAdmin(admin.ModelAdmin):
     estado_badge.short_description = 'Estado'
     
     def save_model(self, request, obj, form, change):
-        if not change:  # Si es un nuevo pedido
+        if not change:
             obj.usuario_registro = request.user
         super().save_model(request, obj, form, change)
 
@@ -217,7 +217,7 @@ class MovimientoInventarioAdmin(admin.ModelAdmin):
     tipo_badge.short_description = 'Tipo'
     
     def save_model(self, request, obj, form, change):
-        if not change:  # Si es un nuevo movimiento
+        if not change:
             obj.usuario = request.user
         super().save_model(request, obj, form, change)
 
@@ -325,7 +325,6 @@ class TrabajoAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-# Personalización del sitio de administración
 admin.site.site_header = "Imprenta Capital - Administración"
 admin.site.site_title = "Imprenta Capital"
 admin.site.index_title = "Panel de Control"

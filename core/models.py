@@ -3,9 +3,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-
-
-# Modelo de Cliente
 class Cliente(models.Model):
     nombre = models.CharField(max_length=255, verbose_name="Nombre completo")
     telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
@@ -25,9 +22,6 @@ class Cliente(models.Model):
         return self.nombre
     
     def actualizar_frecuencia(self):
-        """Marca cliente frecuente de forma dinámica según el umbral de pedidos entregados.
-        True si cantidad_pedidos >= 5, False en caso contrario.
-        """
         umbral = getattr(settings, 'CLIENTE_FRECUENTE_UMBRAL', 5)
         es_frecuente_nuevo = self.cantidad_pedidos >= umbral
         if self.es_frecuente != es_frecuente_nuevo:
@@ -35,11 +29,9 @@ class Cliente(models.Model):
             self.save(update_fields=['es_frecuente'])
     
     def obtener_descuento(self):
-        """Retorna el porcentaje de descuento según el tipo de cliente"""
         return 10 if self.es_frecuente else 0
 
 
-# Modelo de Producto
 class Producto(models.Model):
     TIPOS_PRODUCTO = [
         ('tarjetas', 'Tarjetas de presentación'),
@@ -72,7 +64,6 @@ class Producto(models.Model):
         return f"{self.nombre} - {self.get_tipo_display()}"
 
 
-# Modelo de Inventario
 class Inventario(models.Model):
     UNIDADES = [
         ('unidad', 'Unidad'),
@@ -105,11 +96,9 @@ class Inventario(models.Model):
         return f"{self.nombre} ({self.cantidad} {self.unidad})"
     
     def necesita_reposicion(self):
-        """Verifica si el material necesita reposición"""
         return self.cantidad <= self.cantidad_minima
     
     def estado_stock(self):
-        """Retorna el estado del stock"""
         if self.cantidad == 0:
             return 'agotado'
         elif self.necesita_reposicion():
@@ -118,7 +107,6 @@ class Inventario(models.Model):
             return 'normal'
 
 
-# Modelo de Pedido
 class Pedido(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
@@ -157,22 +145,17 @@ class Pedido(models.Model):
         return f"Pedido #{self.id} - {self.cliente.nombre} - {mat_name} - {self.estado}"
     
     def save(self, *args, **kwargs):
-        # Calcular precio total considerando descuento
         subtotal = self.precio_unitario * self.cantidad
         descuento_monto = subtotal * (self.descuento / 100)
         self.precio_total = subtotal - descuento_monto
         
         super().save(*args, **kwargs)
-        
-        # Actualizar contador de pedidos del cliente (solo pedidos ENTREGADOS)
+
         self.cliente.cantidad_pedidos = self.cliente.pedidos.filter(estado='entregado').count()
-        # Guardar inmediatamente el contador
         self.cliente.save(update_fields=['cantidad_pedidos'])
-        # Actualizar frecuencia si corresponde
         self.cliente.actualizar_frecuencia()
 
 
-# Modelo de Producción
 class Produccion(models.Model):
     ESTADOS_PRODUCCION = [
         ('no_iniciado', 'No Iniciado'),
@@ -202,7 +185,6 @@ class Produccion(models.Model):
         return f"Producción de {self.pedido}"
     
     def iniciar_produccion(self):
-        """Inicia la producción y actualiza el estado del pedido"""
         from django.utils import timezone
         self.estado = 'en_proceso'
         self.fecha_inicio = timezone.now()
@@ -212,7 +194,6 @@ class Produccion(models.Model):
         self.pedido.save()
     
     def finalizar_produccion(self):
-        """Finaliza la producción y actualiza el estado del pedido"""
         from django.utils import timezone
         self.estado = 'terminado'
         self.fecha_finalizacion = timezone.now()
@@ -227,7 +208,6 @@ class Produccion(models.Model):
         self.pedido.save()
 
 
-# Modelo de Movimiento de Inventario
 class MovimientoInventario(models.Model):
     TIPOS_MOVIMIENTO = [
         ('entrada', 'Entrada'),
@@ -252,7 +232,6 @@ class MovimientoInventario(models.Model):
         return f"{self.get_tipo_display()} - {self.inventario.nombre} ({self.cantidad})"
     
     def save(self, *args, **kwargs):
-        # Actualizar cantidad en inventario
         if self.tipo == 'entrada':
             self.inventario.cantidad += self.cantidad
         elif self.tipo == 'salida':
@@ -264,7 +243,6 @@ class MovimientoInventario(models.Model):
         super().save(*args, **kwargs)
 
 
-# Modelo de Perfil de Usuario (extender User de Django)
 class PerfilUsuario(models.Model):
     ROLES = [
         ('administrador', 'Administrador'),
@@ -290,8 +268,6 @@ class PerfilUsuario(models.Model):
     def es_empleado(self):
         return self.rol == 'empleado'
 
-
-# ====== COMPRAS (Proveedores y Pedidos a Proveedores) ======
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=255, verbose_name="Nombre del proveedor")
@@ -333,7 +309,6 @@ class Compra(models.Model):
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
     usuario_registro = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='compras_registradas', verbose_name="Registrado por")
 
-    # Bandera para evitar aplicar stock más de una vez
     stock_aplicado = models.BooleanField(default=False, verbose_name="Stock aplicado")
 
     class Meta:
@@ -345,10 +320,7 @@ class Compra(models.Model):
         return f"Compra #{self.id} - {self.proveedor.nombre} - {self.inventario.nombre}"
 
     def save(self, *args, **kwargs):
-        # Calcular costo total
         self.costo_total = (self.precio_unitario or Decimal('0')) * (self.cantidad or 0)
-
-        # Detectar cambio de estado para aplicar stock al recibir
         estado_anterior = None
         if self.pk:
             try:
@@ -357,8 +329,6 @@ class Compra(models.Model):
                 estado_anterior = None
 
         super().save(*args, **kwargs)
-
-        # Si la compra pasa a recibido y aún no se aplicó stock, crear movimiento de entrada
         if self.estado == 'recibido' and not self.stock_aplicado:
             movimiento = MovimientoInventario(
                 inventario=self.inventario,
@@ -368,12 +338,9 @@ class Compra(models.Model):
                 usuario=self.usuario_registro
             )
             movimiento.save()
-
-            # Marcar como aplicado para no duplicar
             Compra.objects.filter(pk=self.pk).update(stock_aplicado=True)
 
 
-# Modelo de Trabajo (Productos/Servicios de imprenta)
 class Trabajo(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
@@ -412,14 +379,11 @@ class Trabajo(models.Model):
         return f"Trabajo #{self.id} - {self.cliente.nombre} - {prod_name} - {self.estado}"
 
     def save(self, *args, **kwargs):
-        # Calcular precio total considerando descuento
         subtotal = self.precio_unitario * self.cantidad
         descuento_monto = subtotal * (self.descuento / 100)
         self.precio_total = subtotal - descuento_monto
 
         super().save(*args, **kwargs)
-
-        # Actualizar contador de pedidos del cliente (solo trabajos ENTREGADOS)
         self.cliente.cantidad_pedidos = self.cliente.pedidos.filter(estado='entregado').count() + \
                                         self.cliente.trabajos.filter(estado='entregado').count()
         self.cliente.save(update_fields=['cantidad_pedidos'])

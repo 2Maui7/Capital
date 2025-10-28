@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Imprenta Capital{% endblock %}</title>
     
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <!-- Custom CSS -->
+
     <style>
         :root {
             --primary-color: #667eea;
@@ -173,7 +170,6 @@
     {% if user.is_authenticated %}
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <nav class="col-md-2 col-lg-2 d-md-block sidebar">
                 <div class="brand-title">
                     <i class="bi bi-printer-fill"></i> Capital
@@ -237,9 +233,7 @@
                 </ul>
             </nav>
             
-            <!-- Main content -->
             <main class="col-md-10 col-lg-10 ms-sm-auto">
-                <!-- Top navbar -->
                 <div class="navbar-top mb-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -258,7 +252,6 @@
                     </div>
                 </div>
                 
-                <!-- Messages -->
                 {% if messages %}
                     {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -269,7 +262,6 @@
                     {% endfor %}
                 {% endif %}
                 
-                <!-- Content -->
                 <div class="content-wrapper">
                     {% block content %}{% endblock %}
                 </div>
@@ -280,7 +272,6 @@
         {% block fullwidth_content %}{% endblock %}
     {% endif %}
     
-    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     {% block extra_js %}{% endblock %}
