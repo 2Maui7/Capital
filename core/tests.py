@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 from .models import Proveedor
-from .models import Cliente, Producto, Pedido
+from .models import Cliente, Inventario, Pedido
 from decimal import Decimal
 
 
@@ -31,21 +31,37 @@ class ComprasUITest(TestCase):
 		self.assertIn('Tintas SRL', html)
 
 
+class PedidoProductoChoicesTest(TestCase):
+	def setUp(self):
+		self.user = User.objects.create_user(username='seller2', password='s3cret')
+		self.cliente = Cliente.objects.create(nombre='Foo')
+		# Crear 12 materiales para probar que el select contiene todos
+		for i in range(12):
+			Inventario.objects.create(
+				nombre=f'Mat {i:02d}', descripcion='x', cantidad=10, cantidad_minima=1, unidad='unidad', proveedor='Prov', precio_unitario=Decimal('1.00')
+			)
+
+	def test_form_pedido_lista_todos_los_productos(self):
+		from .forms import PedidoForm
+		form = PedidoForm()
+		qs = form.fields['inventario'].queryset
+		self.assertEqual(qs.count(), 12)
+
+
 class ClientePedidosCountTest(TestCase):
 	def setUp(self):
 		self.user = User.objects.create_user(username='seller', password='s3cret')
 		self.cliente = Cliente.objects.create(nombre='ACME')
-		self.producto = Producto.objects.create(
-			nombre='Tarjetas', tipo='tarjetas', descripcion='x', precio_unitario=Decimal('10.00'), activo=True
+		self.material = Inventario.objects.create(
+			nombre='Cartulina', descripcion='x', cantidad=100, cantidad_minima=5, unidad='unidad', proveedor='Local', precio_unitario=Decimal('10.00')
 		)
 
 	def _nuevo_pedido(self, estado):
 		pedido = Pedido.objects.create(
 			cliente=self.cliente,
-			producto=self.producto,
+			inventario=self.material,
 			cantidad=1,
 			descripcion='Test',
-			especificaciones='',
 			precio_unitario=Decimal('10.00'),
 			descuento=Decimal('0'),
 			fecha_entrega='2025-10-30',

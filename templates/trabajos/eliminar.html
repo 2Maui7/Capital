@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Trabajo - Imprenta Capital{% endblock %}
+{% block page_title %}Eliminar Trabajo{% endblock %}
+{% block page_subtitle %}Confirma la eliminación del trabajo{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <p>¿Estás seguro de que deseas eliminar el trabajo <strong>#{{ trabajo.id }}</strong> del cliente <strong>{{ trabajo.cliente.nombre }}</strong>?</p>
+    <form method="post">
+      {% csrf_token %}
+      <a href="{% url 'core:trabajos_lista' %}" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-danger">Eliminar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

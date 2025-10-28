@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from .models import PerfilUsuario, Pedido, Produccion
+from .models import PerfilUsuario, Pedido, Produccion, Trabajo
 
 
 @receiver(post_save, sender=User)
@@ -40,6 +40,27 @@ def actualizar_contador_cliente_al_eliminar_pedido(sender, instance, **kwargs):
     from .models import Cliente as ClienteModel
     if not ClienteModel.objects.filter(pk=cliente.pk).exists():
         return
-    cliente.cantidad_pedidos = cliente.pedidos.filter(estado='entregado').count()
+    # Contar entregados de pedidos y trabajos
+    pedidos_entregados = cliente.pedidos.filter(estado='entregado').count()
+    trabajos_entregados = cliente.trabajos.filter(estado='entregado').count()
+    cliente.cantidad_pedidos = pedidos_entregados + trabajos_entregados
+    cliente.save(update_fields=['cantidad_pedidos'])
+    cliente.actualizar_frecuencia()
+
+
+@receiver(post_delete, sender=Trabajo)
+def actualizar_contador_cliente_al_eliminar_trabajo(sender, instance, **kwargs):
+    """Recalcular cantidad de pedidos del cliente al eliminar un trabajo.
+    Suma pedidos y trabajos con estado 'entregado'.
+    """
+    cliente = getattr(instance, 'cliente', None)
+    if not cliente:
+        return
+    from .models import Cliente as ClienteModel
+    if not ClienteModel.objects.filter(pk=cliente.pk).exists():
+        return
+    pedidos_entregados = cliente.pedidos.filter(estado='entregado').count()
+    trabajos_entregados = cliente.trabajos.filter(estado='entregado').count()
+    cliente.cantidad_pedidos = pedidos_entregados + trabajos_entregados
     cliente.save(update_fields=['cantidad_pedidos'])
     cliente.actualizar_frecuencia()

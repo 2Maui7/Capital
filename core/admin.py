@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from .models import (
     Cliente, Producto, Inventario, Pedido, 
     Produccion, MovimientoInventario, PerfilUsuario,
-    Proveedor, Compra
+    Proveedor, Compra, Trabajo
 )
 
 
@@ -105,15 +105,15 @@ class InventarioAdmin(admin.ModelAdmin):
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'cliente', 'producto', 'cantidad', 'precio_total', 'estado_badge', 'fecha_creacion', 'fecha_entrega']
+    list_display = ['id', 'cliente', 'inventario', 'cantidad', 'precio_total', 'estado_badge', 'fecha_creacion', 'fecha_entrega']
     list_filter = ['estado', 'fecha_creacion', 'fecha_entrega']
-    search_fields = ['cliente__nombre', 'producto__nombre', 'descripcion']
+    search_fields = ['cliente__nombre', 'inventario__nombre', 'descripcion']
     readonly_fields = ['precio_total', 'fecha_creacion', 'usuario_registro']
     date_hierarchy = 'fecha_creacion'
     
     fieldsets = (
         ('Información del Pedido', {
-            'fields': ('cliente', 'producto', 'cantidad', 'descripcion', 'especificaciones')
+            'fields': ('cliente', 'inventario', 'cantidad', 'descripcion')
         }),
         ('Precios', {
             'fields': ('precio_unitario', 'descuento', 'precio_total')
@@ -287,6 +287,35 @@ class CompraAdmin(admin.ModelAdmin):
         }),
         ('Registro', {
             'fields': ('usuario_registro', 'stock_aplicado', 'observaciones')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.usuario_registro = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Trabajo)
+class TrabajoAdmin(admin.ModelAdmin):
+    list_display = ['id', 'cliente', 'producto', 'cantidad', 'precio_total', 'estado', 'fecha_creacion', 'fecha_entrega']
+    list_filter = ['estado', 'fecha_creacion']
+    search_fields = ['cliente__nombre', 'producto__nombre', 'descripcion']
+    readonly_fields = ['precio_total', 'fecha_creacion', 'usuario_registro']
+    date_hierarchy = 'fecha_creacion'
+
+    fieldsets = (
+        ('Información del Trabajo', {
+            'fields': ('cliente', 'producto', 'cantidad', 'descripcion')
+        }),
+        ('Precios', {
+            'fields': ('precio_unitario', 'descuento', 'precio_total')
+        }),
+        ('Fechas', {
+            'fields': ('fecha_creacion', 'fecha_entrega', 'fecha_entregado')
+        }),
+        ('Estado', {
+            'fields': ('estado', 'usuario_registro')
         }),
     )
 

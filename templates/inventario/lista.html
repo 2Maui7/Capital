@@ -15,6 +15,14 @@
         </a>
     </div>
     <div class="card-body">
+        <!-- Filtros -->
+        <form method="get" class="mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="f-ocultar-agotados" name="ocultar_agotados" value="1" {% if ocultar_agotados %}checked{% endif %}>
+                <label class="form-check-label" for="f-ocultar-agotados">Ocultar materiales agotados</label>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Aplicar</button>
+        </form>
         {% if inventario %}
         <div class="table-responsive">
             <table class="table table-hover">
@@ -129,7 +137,7 @@
     <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
         <i class="bi bi-exclamation-triangle me-2"></i>
         <strong>Alerta:</strong> El material <strong>{{ material.nombre }}</strong> está {% if material.cantidad == 0 %}agotado{% else %}bajo en stock ({{ material.cantidad }} {{ material.unidad }}){% endif %}. Se recomienda realizar pedido al proveedor.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
     </div>
     {% endif %}
 {% endfor %}

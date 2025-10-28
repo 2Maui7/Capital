@@ -41,6 +41,24 @@
 </div>
 
 <div class="row">
+    <!-- Trabajos (productos/servicios) -->
+    <div class="col-md-6 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-briefcase" style="font-size: 3rem; color: #0dcaf0;"></i>
+            <div class="stat-number">{{ trabajos_pendientes }}</div>
+            <div class="stat-label">Trabajos Pendientes</div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card stat-card">
+            <i class="bi bi-briefcase-fill" style="font-size: 3rem; color: #6610f2;"></i>
+            <div class="stat-number">{{ trabajos_en_produccion }}</div>
+            <div class="stat-label">Trabajos en Producción</div>
+        </div>
+    </div>
+ </div>
+
+<div class="row">
     <!-- Compras -->
     <div class="col-md-4 mb-4">
         <div class="card stat-card">
@@ -81,7 +99,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Cliente</th>
-                                <th>Producto</th>
+                                <th>Material</th>
                                 <th>Estado</th>
                                 <th>Fecha</th>
                             </tr>
@@ -91,7 +109,7 @@
                             <tr>
                                 <td><strong>#{{ pedido.id }}</strong></td>
                                 <td>{{ pedido.cliente.nombre }}</td>
-                                <td>{{ pedido.producto.nombre }}</td>
+                                <td>{{ pedido.inventario.nombre|default:"-" }}</td>
                                 <td>
                                     {% if pedido.estado == 'pendiente' %}
                                         <span class="badge bg-secondary">Pendiente</span>
@@ -170,6 +188,11 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'core:trabajo_crear' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-briefcase me-2"></i>Nuevo Trabajo
+                        </a>
+                    </div>
                     <div class="col-md-3">
                         <a href="{% url 'core:pedido_crear' %}" class="btn btn-outline-primary w-100">
                             <i class="bi bi-plus-circle me-2"></i>Nuevo Pedido

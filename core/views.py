@@ -3,20 +3,17 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum, Count
-from django.http import JsonResponse
 from django.utils import timezone
-from datetime import datetime, timedelta
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from decimal import Decimal
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
-from .models import Cliente, Producto, Pedido, Inventario, Produccion, MovimientoInventario, Proveedor, Compra
+from .models import Cliente, Producto, Pedido, Inventario, Produccion, MovimientoInventario, Proveedor, Compra, Trabajo
 from .forms import (
-    LoginForm, ClienteForm, ProductoForm, PedidoForm, 
-    InventarioForm, ProduccionForm, MovimientoInventarioForm,
-    ProveedorForm, CompraForm
+    LoginForm, ClienteForm, PedidoForm,
+    ProveedorForm, CompraForm, TrabajoForm
 )
 from .decorators import administrador_o_empleado, solo_administrador
 
@@ -69,6 +66,11 @@ def dashboard(request):
     pedidos_en_produccion = Pedido.objects.filter(estado='en_produccion').count()
     pedidos_hoy = Pedido.objects.filter(fecha_creacion=timezone.now().date()).count()
     
+    # Trabajos (productos/servicios)
+    trabajos_pendientes = Trabajo.objects.filter(estado='pendiente').count()
+    trabajos_en_produccion = Trabajo.objects.filter(estado='en_produccion').count()
+    trabajos_hoy = Trabajo.objects.filter(fecha_creacion=timezone.now().date()).count()
+    
     # Compras
     compras_pendientes = Compra.objects.filter(estado='pendiente').count()
     compras_ordenadas = Compra.objects.filter(estado='ordenado').count()
@@ -84,7 +86,9 @@ def dashboard(request):
     produccion_activa = Produccion.objects.filter(estado='en_proceso').count()
     
     # Últimos pedidos
-    ultimos_pedidos = Pedido.objects.select_related('cliente', 'producto').order_by('-fecha_creacion')[:5]
+    ultimos_pedidos = Pedido.objects.select_related('cliente', 'inventario').order_by('-fecha_creacion')[:5]
+    # Últimos trabajos
+    ultimos_trabajos = Trabajo.objects.select_related('cliente', 'producto').order_by('-fecha_creacion')[:5]
     
     # Materiales críticos
     materiales_criticos = Inventario.objects.filter(
@@ -97,12 +101,16 @@ def dashboard(request):
         'pedidos_pendientes': pedidos_pendientes,
         'pedidos_en_produccion': pedidos_en_produccion,
         'pedidos_hoy': pedidos_hoy,
+        'trabajos_pendientes': trabajos_pendientes,
+        'trabajos_en_produccion': trabajos_en_produccion,
+        'trabajos_hoy': trabajos_hoy,
         'compras_pendientes': compras_pendientes,
         'compras_ordenadas': compras_ordenadas,
         'compras_recibidas': compras_recibidas,
         'materiales_bajo_stock': materiales_bajo_stock,
         'produccion_activa': produccion_activa,
         'ultimos_pedidos': ultimos_pedidos,
+        'ultimos_trabajos': ultimos_trabajos,
         'materiales_criticos': materiales_criticos,
     }
     
@@ -189,7 +197,7 @@ def pedidos_lista(request):
     estado_filtro = request.GET.get('estado', '')
     query = request.GET.get('q', '')
     
-    pedidos = Pedido.objects.select_related('cliente', 'producto').all()
+    pedidos = Pedido.objects.select_related('cliente', 'inventario').all()
     
     if estado_filtro:
         pedidos = pedidos.filter(estado=estado_filtro)
@@ -197,7 +205,7 @@ def pedidos_lista(request):
     if query:
         pedidos = pedidos.filter(
             Q(cliente__nombre__icontains=query) |
-            Q(producto__nombre__icontains=query) |
+            Q(inventario__nombre__icontains=query) |
             Q(descripcion__icontains=query)
         )
     
@@ -208,6 +216,112 @@ def pedidos_lista(request):
         'estado_filtro': estado_filtro,
         'query': query
     })
+
+
+# ============= TRABAJOS (Productos/Servicios) =============
+
+@login_required
+@administrador_o_empleado
+def trabajos_lista(request):
+    """Lista de trabajos (productos/servicios)"""
+    estado_filtro = request.GET.get('estado', '')
+    query = request.GET.get('q', '')
+
+    trabajos = Trabajo.objects.select_related('cliente', 'producto').all()
+
+    if estado_filtro:
+        trabajos = trabajos.filter(estado=estado_filtro)
+
+    if query:
+        trabajos = trabajos.filter(
+            Q(cliente__nombre__icontains=query) |
+            Q(producto__nombre__icontains=query) |
+            Q(descripcion__icontains=query)
+        )
+
+    trabajos = trabajos.order_by('-fecha_creacion')
+
+    return render(request, 'trabajos/lista.html', {
+        'trabajos': trabajos,
+        'estado_filtro': estado_filtro,
+        'query': query,
+    })
+
+
+@login_required
+@administrador_o_empleado
+def trabajo_crear(request):
+    """Crear nuevo trabajo"""
+    if request.method == 'POST':
+        form = TrabajoForm(request.POST)
+        if form.is_valid():
+            trabajo = form.save(commit=False)
+            trabajo.usuario_registro = request.user
+            trabajo.save()
+            messages.success(request, f'Trabajo #{trabajo.id} creado exitosamente')
+            return redirect('core:trabajos_lista')
+    else:
+        form = TrabajoForm()
+
+    productos_data = list(Producto.objects.filter(activo=True).values('id', 'precio_unitario'))
+    productos_json = json.dumps(productos_data, cls=DjangoJSONEncoder)
+    productos_count = Producto.objects.filter(activo=True).count()
+
+    return render(request, 'trabajos/formulario.html', {
+        'form': form,
+        'accion': 'Crear',
+        'productos_data_json': productos_json,
+        'productos_count': productos_count,
+    })
+
+
+@login_required
+@administrador_o_empleado
+def trabajo_editar(request, pk):
+    """Editar trabajo existente"""
+    trabajo = get_object_or_404(Trabajo, pk=pk)
+
+    if request.method == 'POST':
+        form = TrabajoForm(request.POST, instance=trabajo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Trabajo #{trabajo.id} actualizado exitosamente')
+            return redirect('core:trabajo_detalle', pk=trabajo.pk)
+    else:
+        form = TrabajoForm(instance=trabajo)
+
+    productos_data = list(Producto.objects.filter(activo=True).values('id', 'precio_unitario'))
+    productos_json = json.dumps(productos_data, cls=DjangoJSONEncoder)
+    productos_count = Producto.objects.filter(activo=True).count()
+
+    return render(request, 'trabajos/formulario.html', {
+        'form': form,
+        'accion': 'Editar',
+        'trabajo': trabajo,
+        'productos_data_json': productos_json,
+        'productos_count': productos_count,
+    })
+
+
+@login_required
+@administrador_o_empleado
+def trabajo_detalle(request, pk):
+    """Detalle de trabajo"""
+    trabajo = get_object_or_404(Trabajo, pk=pk)
+    return render(request, 'trabajos/detalle.html', {'trabajo': trabajo})
+
+
+@login_required
+@solo_administrador
+def trabajo_eliminar(request, pk):
+    """Eliminar trabajo (solo administradores)"""
+    trabajo = get_object_or_404(Trabajo, pk=pk)
+    if request.method == 'POST':
+        trabajo_id = trabajo.id
+        trabajo.delete()
+        messages.success(request, f'Trabajo #{trabajo_id} eliminado exitosamente')
+        return redirect('core:trabajos_lista')
+    return render(request, 'trabajos/eliminar.html', {'trabajo': trabajo})
 
 
 @login_required
@@ -224,8 +338,21 @@ def pedido_crear(request):
             return redirect('core:pedidos_lista')
     else:
         form = PedidoForm()
+
+    # Datos de productos para autocompletar precio (id, precio_unitario)
+    from django.core.serializers.json import DjangoJSONEncoder
+    import json
+    qs_inv = Inventario.objects.filter(cantidad__gt=0)
+    productos_data = list(qs_inv.values('id', 'precio_unitario'))
+    productos_json = json.dumps(productos_data, cls=DjangoJSONEncoder)
+    productos_count = qs_inv.count()
     
-    return render(request, 'pedidos/formulario.html', {'form': form, 'accion': 'Crear'})
+    return render(request, 'pedidos/formulario.html', {
+        'form': form,
+        'accion': 'Crear',
+        'productos_data_json': productos_json,
+        'productos_count': productos_count,
+    })
 
 
 @login_required
@@ -242,11 +369,20 @@ def pedido_editar(request, pk):
             return redirect('core:pedido_detalle', pk=pedido.pk)
     else:
         form = PedidoForm(instance=pedido)
-    
+
+    from django.core.serializers.json import DjangoJSONEncoder
+    import json
+    qs_inv = Inventario.objects.filter(Q(cantidad__gt=0) | Q(pk=pedido.inventario_id))
+    productos_data = list(qs_inv.values('id', 'precio_unitario'))
+    productos_json = json.dumps(productos_data, cls=DjangoJSONEncoder)
+    productos_count = qs_inv.count()
+
     return render(request, 'pedidos/formulario.html', {
-        'form': form, 
+        'form': form,
         'accion': 'Editar',
-        'pedido': pedido
+        'pedido': pedido,
+        'productos_data_json': productos_json,
+        'productos_count': productos_count,
     })
 
 
@@ -279,16 +415,18 @@ def pedido_eliminar(request, pk):
 @administrador_o_empleado
 def inventario_lista(request):
     """Lista de materiales en inventario"""
-    inventario = Inventario.objects.all().order_by('nombre')
-    return render(request, 'inventario/lista.html', {'inventario': inventario})
+    ocultar_agotados = request.GET.get('ocultar_agotados') in ['1', 'true', 'on']
+    qs = Inventario.objects.all()
+    if ocultar_agotados:
+        qs = qs.filter(cantidad__gt=0)
+    inventario = qs.order_by('nombre')
+    return render(request, 'inventario/lista.html', {
+        'inventario': inventario,
+        'ocultar_agotados': ocultar_agotados,
+    })
 
 
-@login_required
-@administrador_o_empleado
-def inventario_crear(request):
-    """[Deshabilitado] Crear material solo vía Compras"""
-    messages.warning(request, 'La creación de materiales ahora se realiza desde Compras.')
-    return redirect('core:compras_lista')
+ 
 
 
 # ============= PANEL DE PRODUCCIÓN =============
@@ -342,6 +480,12 @@ def api_dashboard_stats(request):
             'pendientes': Pedido.objects.filter(estado='pendiente').count(),
             'en_produccion': Pedido.objects.filter(estado='en_produccion').count(),
             'terminados': Pedido.objects.filter(estado='terminado').count(),
+        },
+        'trabajos': {
+            'total': Trabajo.objects.count(),
+            'pendientes': Trabajo.objects.filter(estado='pendiente').count(),
+            'en_produccion': Trabajo.objects.filter(estado='en_produccion').count(),
+            'terminados': Trabajo.objects.filter(estado='terminado').count(),
         },
         'inventario': {
             'total_materiales': Inventario.objects.count(),

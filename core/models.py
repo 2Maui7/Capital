@@ -130,10 +130,9 @@ class Pedido(models.Model):
     ]
     
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='pedidos', verbose_name="Cliente")
-    producto = models.ForeignKey(Producto, on_delete=models.SET_NULL, null=True, related_name='pedidos', verbose_name="Producto")
+    inventario = models.ForeignKey(Inventario, on_delete=models.SET_NULL, null=True, related_name='pedidos', verbose_name="Material")
     cantidad = models.IntegerField(validators=[MinValueValidator(1)], verbose_name="Cantidad")
     descripcion = models.TextField(verbose_name="Descripción del pedido")
-    especificaciones = models.TextField(blank=True, null=True, verbose_name="Especificaciones técnicas")
     
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio unitario")
     descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Descuento (%)")
@@ -153,7 +152,9 @@ class Pedido(models.Model):
         ordering = ['-fecha_creacion']
     
     def __str__(self):
-        return f"Pedido #{self.id} - {self.cliente.nombre} - {self.estado}"
+        mat = getattr(self, 'inventario', None)
+        mat_name = mat.nombre if mat else 'Sin material'
+        return f"Pedido #{self.id} - {self.cliente.nombre} - {mat_name} - {self.estado}"
     
     def save(self, *args, **kwargs):
         # Calcular precio total considerando descuento
@@ -370,3 +371,56 @@ class Compra(models.Model):
 
             # Marcar como aplicado para no duplicar
             Compra.objects.filter(pk=self.pk).update(stock_aplicado=True)
+
+
+# Modelo de Trabajo (Productos/Servicios de imprenta)
+class Trabajo(models.Model):
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('en_proceso', 'En Proceso'),
+        ('en_produccion', 'En Producción'),
+        ('terminado', 'Terminado'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='trabajos', verbose_name="Cliente")
+    producto = models.ForeignKey(Producto, on_delete=models.SET_NULL, null=True, related_name='trabajos', verbose_name="Producto/Trabajo")
+    cantidad = models.IntegerField(validators=[MinValueValidator(1)], verbose_name="Cantidad")
+    descripcion = models.TextField(verbose_name="Descripción del trabajo")
+
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio unitario")
+    descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Descuento (%)")
+    precio_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio total")
+
+    estado = models.CharField(max_length=50, choices=ESTADOS, default='pendiente', verbose_name="Estado")
+
+    fecha_creacion = models.DateField(auto_now_add=True, verbose_name="Fecha de creación")
+    fecha_entrega = models.DateField(verbose_name="Fecha de entrega estimada")
+    fecha_entregado = models.DateField(blank=True, null=True, verbose_name="Fecha de entrega real")
+
+    usuario_registro = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='trabajos_registrados', verbose_name="Registrado por")
+
+    class Meta:
+        verbose_name = "Trabajo"
+        verbose_name_plural = "Trabajos"
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        prod = getattr(self, 'producto', None)
+        prod_name = prod.nombre if prod else 'Sin producto'
+        return f"Trabajo #{self.id} - {self.cliente.nombre} - {prod_name} - {self.estado}"
+
+    def save(self, *args, **kwargs):
+        # Calcular precio total considerando descuento
+        subtotal = self.precio_unitario * self.cantidad
+        descuento_monto = subtotal * (self.descuento / 100)
+        self.precio_total = subtotal - descuento_monto
+
+        super().save(*args, **kwargs)
+
+        # Actualizar contador de pedidos del cliente (solo trabajos ENTREGADOS)
+        self.cliente.cantidad_pedidos = self.cliente.pedidos.filter(estado='entregado').count() + \
+                                        self.cliente.trabajos.filter(estado='entregado').count()
+        self.cliente.save(update_fields=['cantidad_pedidos'])
+        self.cliente.actualizar_frecuencia()

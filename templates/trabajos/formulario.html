@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Trabajo - Imprenta Capital{% endblock %}
+{% block page_title %}{{ accion }} Trabajo{% endblock %}
+{% block page_subtitle %}Formulario de registro de trabajo (producto/servicio){% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-briefcase me-2"></i>{{ accion }} Trabajo
+            </div>
+            <div class="card-body">
+                <form method="post" id="trabajoForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.cliente.id_for_label }}" class="form-label">Cliente *</label>
+                            {{ form.cliente }}
+                            {% if form.cliente.errors %}
+                                <div class="text-danger small">{{ form.cliente.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Selecciona el cliente que solicita el trabajo</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.producto.id_for_label }}" class="form-label">Producto/Trabajo *</label>
+                            {{ form.producto }}
+                            {% if form.producto.errors %}
+                                <div class="text-danger small">{{ form.producto.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">{{ productos_count|default:0 }} productos activos</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">Cantidad *</label>
+                            {{ form.cantidad }}
+                            {% if form.cantidad.errors %}
+                                <div class="text-danger small">{{ form.cantidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">Precio Unitario *</label>
+                            {{ form.precio_unitario }}
+                            {% if form.precio_unitario.errors %}
+                                <div class="text-danger small">{{ form.precio_unitario.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.descuento.id_for_label }}" class="form-label">Descuento (%)</label>
+                            {{ form.descuento }}
+                            {% if form.descuento.errors %}
+                                <div class="text-danger small">{{ form.descuento.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            <div class="alert alert-secondary py-2 mb-0" role="status" aria-live="polite">
+                                <strong>Total estimado:</strong> <span id="total-estimado" class="h5 text-primary">Bs. 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción del Trabajo *</label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_entrega.id_for_label }}" class="form-label">Fecha de Entrega *</label>
+                            {{ form.fecha_entrega }}
+                            {% if form.fecha_entrega.errors %}
+                                <div class="text-danger small">{{ form.fecha_entrega.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">Estado</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="text-danger small">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        {% if trabajo %}
+                        <a href="{% url 'core:trabajo_detalle' trabajo.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        {% else %}
+                        <a href="{% url 'core:trabajos_lista' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Guardar Trabajo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Información
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">Instrucciones:</h6>
+                <ul class="small">
+                    <li>Selecciona el cliente</li>
+                    <li>El precio unitario se autocompleta desde el producto</li>
+                    <li>El precio total se calcula automáticamente</li>
+                    <li>Indica la fecha de entrega estimada</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script type="application/json" id="productos-data-json">{{ productos_data_json|default:'[]'|safe }}</script>
+  <script>
+  (function(){
+    const selectProducto = document.getElementById('{{ form.producto.id_for_label }}') || document.getElementById('id_producto');
+    const inputPrecio = document.getElementById('{{ form.precio_unitario.id_for_label }}') || document.getElementById('id_precio_unitario');
+    const inputCantidad = document.getElementById('{{ form.cantidad.id_for_label }}') || document.getElementById('id_cantidad');
+    const inputDescuento = document.getElementById('{{ form.descuento.id_for_label }}') || document.getElementById('id_descuento');
+    const spanTotal = document.getElementById('total-estimado');
+
+    try {
+        const productosData = JSON.parse(document.getElementById('productos-data-json').textContent);
+        const mapPrecios = new Map(productosData.map(p => [String(p.id), p.precio_unitario]));
+
+        function actualizarPrecio(){
+            const pid = selectProducto?.value;
+            if (!pid) return;
+            if (mapPrecios.has(pid) && inputPrecio) {
+                const precio = mapPrecios.get(pid);
+                inputPrecio.value = precio;
+                inputPrecio.dispatchEvent(new Event('input', { bubbles: true }));
+                inputPrecio.dispatchEvent(new Event('change', { bubbles: true }));
+                calcularTotal();
+            }
+        }
+
+        function normalizarNumero(val){
+            if (typeof val === 'number') return val;
+            if (!val) return 0;
+            const v = String(val).replace(',', '.');
+            const n = parseFloat(v);
+            return isNaN(n) ? 0 : n;
+        }
+
+        function calcularTotal(){
+            const precio = normalizarNumero(inputPrecio?.value);
+            const cantidad = Math.max(0, Math.floor(normalizarNumero(inputCantidad?.value)));
+            let descuento = normalizarNumero(inputDescuento?.value);
+            if (descuento < 0) descuento = 0; if (descuento > 100) descuento = 100;
+            const subtotal = precio * cantidad;
+            const total = subtotal - (subtotal * (descuento / 100));
+            if (spanTotal) spanTotal.textContent = `Bs. ${total.toFixed(2)}`;
+        }
+
+        if (selectProducto && inputPrecio) {
+            selectProducto.addEventListener('change', actualizarPrecio);
+            if (inputPrecio.value === '' || Number(inputPrecio.value) === 0) {
+                actualizarPrecio();
+            }
+        }
+
+        inputPrecio?.addEventListener('input', calcularTotal);
+        inputCantidad?.addEventListener('input', calcularTotal);
+        inputDescuento?.addEventListener('input', calcularTotal);
+        calcularTotal();
+    } catch (e) {
+        console.warn('No se pudo inicializar autocompletado de precio:', e);
+    }
+  })();
+  </script>
+{% endblock %}

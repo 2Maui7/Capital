@@ -1,7 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth.models import User
-from .models import Cliente, Producto, Pedido, Inventario, Produccion, MovimientoInventario, PerfilUsuario, Proveedor, Compra
+from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Q
+from .models import Cliente, Producto, Pedido, Inventario, Proveedor, Compra, Trabajo
 
 
 class LoginForm(AuthenticationForm):
@@ -34,33 +34,17 @@ class ClienteForm(forms.ModelForm):
         }
 
 
-class ProductoForm(forms.ModelForm):
-    """Formulario para gestión de productos"""
-    class Meta:
-        model = Producto
-        fields = ['nombre', 'tipo', 'descripcion', 'precio_unitario', 'imagen', 'activo']
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'tipo': forms.Select(attrs={'class': 'form-select'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'imagen': forms.FileInput(attrs={'class': 'form-control'}),
-            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
 class PedidoForm(forms.ModelForm):
     """Formulario para gestión de pedidos"""
     class Meta:
         model = Pedido
-        fields = ['cliente', 'producto', 'cantidad', 'descripcion', 'especificaciones', 
+        fields = ['cliente', 'inventario', 'cantidad', 'descripcion',
                   'precio_unitario', 'descuento', 'fecha_entrega', 'estado']
         widgets = {
             'cliente': forms.Select(attrs={'class': 'form-select'}),
-            'producto': forms.Select(attrs={'class': 'form-select'}),
+            'inventario': forms.Select(attrs={'class': 'form-select'}),
             'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'especificaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'descuento': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
             'fecha_entrega': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -69,6 +53,15 @@ class PedidoForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Asegurar que el selector muestre solo materiales disponibles (cantidad > 0).
+        # En modo edición, incluir también el material actual aunque tenga 0 para no invalidar el formulario.
+        if self.instance and getattr(self.instance, 'inventario_id', None):
+            qs = Inventario.objects.filter(Q(cantidad__gt=0) | Q(pk=self.instance.inventario_id)).order_by('nombre')
+        else:
+            qs = Inventario.objects.filter(cantidad__gt=0).order_by('nombre')
+        self.fields['inventario'].queryset = qs
+        # Mostrar como listbox con varias filas visibles para hacer evidente que hay más opciones
+        self.fields['inventario'].widget.attrs.update({'size': '12'})
         # Si hay un cliente seleccionado, aplicar descuento automáticamente
         if self.instance and self.instance.pk and hasattr(self.instance, 'cliente'):
             try:
@@ -77,82 +70,39 @@ class PedidoForm(forms.ModelForm):
                 pass
 
 
-class InventarioForm(forms.ModelForm):
-    """Formulario para gestión de inventario"""
+ 
+
+
+class TrabajoForm(forms.ModelForm):
+    """Formulario para gestión de trabajos (productos/servicios)"""
     class Meta:
-        model = Inventario
-        fields = ['nombre', 'descripcion', 'cantidad', 'cantidad_minima', 'unidad', 'proveedor', 'precio_unitario']
+        model = Trabajo
+        fields = ['cliente', 'producto', 'cantidad', 'descripcion', 'precio_unitario', 'descuento', 'fecha_entrega', 'estado']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'cantidad_minima': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'unidad': forms.Select(attrs={'class': 'form-select'}),
-            'proveedor': forms.TextInput(attrs={'class': 'form-control'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        }
-
-
-class ProduccionForm(forms.ModelForm):
-    """Formulario para gestión de producción"""
-    class Meta:
-        model = Produccion
-        fields = ['pedido', 'estado', 'empleado', 'tiempo_estimado', 'observaciones']
-        widgets = {
-            'pedido': forms.Select(attrs={'class': 'form-select'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}),
-            'empleado': forms.Select(attrs={'class': 'form-select'}),
-            'tiempo_estimado': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
-
-
-class MovimientoInventarioForm(forms.ModelForm):
-    """Formulario para movimientos de inventario"""
-    class Meta:
-        model = MovimientoInventario
-        fields = ['inventario', 'tipo', 'cantidad', 'motivo', 'produccion']
-        widgets = {
-            'inventario': forms.Select(attrs={'class': 'form-select'}),
-            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'cliente': forms.Select(attrs={'class': 'form-select'}),
+            'producto': forms.Select(attrs={'class': 'form-select'}),
             'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'motivo': forms.TextInput(attrs={'class': 'form-control'}),
-            'produccion': forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'descuento': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
+            'fecha_entrega': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
-
-class UsuarioForm(UserCreationForm):
-    """Formulario para crear usuarios"""
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-    first_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2']
-        widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-        }
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['password1'].widget.attrs.update({'class': 'form-control'})
-        self.fields['password2'].widget.attrs.update({'class': 'form-control'})
+        # Mostrar solo productos activos
+        self.fields['producto'].queryset = Producto.objects.filter(activo=True).order_by('nombre')
+        # Mostrar como listbox alto
+        self.fields['producto'].widget.attrs.update({'size': '12'})
+        # Descuento automático si aplica
+        if self.instance and self.instance.pk and hasattr(self.instance, 'cliente'):
+            try:
+                self.initial['descuento'] = self.instance.cliente.obtener_descuento()
+            except Exception:
+                pass
 
-
-class PerfilUsuarioForm(forms.ModelForm):
-    """Formulario para editar perfil de usuario"""
-    class Meta:
-        model = PerfilUsuario
-        fields = ['rol', 'telefono', 'foto', 'activo']
-        widgets = {
-            'rol': forms.Select(attrs={'class': 'form-select'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'foto': forms.FileInput(attrs={'class': 'form-control'}),
-            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
+ 
 class ProveedorForm(forms.ModelForm):
     """Formulario para gestión de proveedores"""
     class Meta:
@@ -187,3 +137,4 @@ class CompraForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Mostrar solo proveedores activos
         self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
+

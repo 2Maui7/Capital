@@ -23,6 +23,13 @@ urlpatterns = [
     path('pedidos/<int:pk>/editar/', views.pedido_editar, name='pedido_editar'),
     path('pedidos/<int:pk>/eliminar/', views.pedido_eliminar, name='pedido_eliminar'),
     path('pedidos/<int:pk>/', views.pedido_detalle, name='pedido_detalle'),
+
+    # Trabajos (Productos/Servicios)
+    path('trabajos/', views.trabajos_lista, name='trabajos_lista'),
+    path('trabajos/crear/', views.trabajo_crear, name='trabajo_crear'),
+    path('trabajos/<int:pk>/', views.trabajo_detalle, name='trabajo_detalle'),
+    path('trabajos/<int:pk>/editar/', views.trabajo_editar, name='trabajo_editar'),
+    path('trabajos/<int:pk>/eliminar/', views.trabajo_eliminar, name='trabajo_eliminar'),
     
     # Inventario
     path('inventario/', views.inventario_lista, name='inventario_lista'),

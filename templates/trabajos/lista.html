@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Pedidos - Imprenta Capital{% endblock %}
-{% block page_title %}Gestión de Pedidos{% endblock %}
-{% block page_subtitle %}Lista de pedidos registrados{% endblock %}
+{% block title %}Trabajos - Imprenta Capital{% endblock %}
+{% block page_title %}Gestión de Trabajos{% endblock %}
+{% block page_subtitle %}Productos y servicios (banners, volantes, etc.){% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div>
-            <i class="bi bi-cart me-2"></i>Lista de Pedidos
+            <i class="bi bi-briefcase me-2"></i>Lista de Trabajos
         </div>
-        <a href="{% url 'core:pedido_crear' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Pedido
+        <a href="{% url 'core:trabajo_crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo Trabajo
         </a>
     </div>
     <div class="card-body">
@@ -21,11 +21,11 @@
                 <div class="col-md-8">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" name="q" class="form-control" placeholder="Buscar por cliente, material o descripción..." value="{{ query }}">
+                        <input type="text" name="q" class="form-control" placeholder="Buscar por cliente, producto o descripción..." value="{{ query }}">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <select name="estado" class="form-select">
+                    <select name="estado" class="form-select" aria-label="Estado">
                         <option value="">Todos los estados</option>
                         <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
                         <option value="en_proceso" {% if estado_filtro == 'en_proceso' %}selected{% endif %}>En Proceso</option>
@@ -41,14 +41,14 @@
             </div>
         </form>
         
-        {% if pedidos %}
+        {% if trabajos %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Cliente</th>
-                        <th>Material</th>
+                        <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Total</th>
                         <th>Estado</th>
@@ -58,40 +58,35 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for pedido in pedidos %}
+                    {% for t in trabajos %}
                     <tr>
-                        <td><strong>#{{ pedido.id }}</strong></td>
+                        <td><strong>#{{ t.id }}</strong></td>
+                        <td>{{ t.cliente.nombre }}</td>
+                        <td>{{ t.producto.nombre|default:"-" }}</td>
+                        <td>{{ t.cantidad }}</td>
+                        <td><strong>Bs. {{ t.precio_total }}</strong></td>
                         <td>
-                            {{ pedido.cliente.nombre }}
-                            {% if pedido.cliente.es_frecuente %}
-                                <i class="bi bi-star-fill text-warning" title="Cliente Frecuente"></i>
-                            {% endif %}
-                        </td>
-                        <td>{{ pedido.inventario.nombre|default:"-" }}</td>
-                        <td>{{ pedido.cantidad }}</td>
-                        <td><strong>Bs. {{ pedido.precio_total }}</strong></td>
-                        <td>
-                            {% if pedido.estado == 'pendiente' %}
+                            {% if t.estado == 'pendiente' %}
                                 <span class="badge bg-secondary">Pendiente</span>
-                            {% elif pedido.estado == 'en_proceso' %}
+                            {% elif t.estado == 'en_proceso' %}
                                 <span class="badge bg-info">En Proceso</span>
-                            {% elif pedido.estado == 'en_produccion' %}
+                            {% elif t.estado == 'en_produccion' %}
                                 <span class="badge bg-warning">En Producción</span>
-                            {% elif pedido.estado == 'terminado' %}
+                            {% elif t.estado == 'terminado' %}
                                 <span class="badge bg-success">Terminado</span>
-                            {% elif pedido.estado == 'entregado' %}
+                            {% elif t.estado == 'entregado' %}
                                 <span class="badge bg-primary">Entregado</span>
                             {% else %}
                                 <span class="badge bg-danger">Cancelado</span>
                             {% endif %}
                         </td>
-                        <td>{{ pedido.fecha_creacion|date:"d/m/Y" }}</td>
-                        <td>{{ pedido.fecha_entrega|date:"d/m/Y" }}</td>
+                        <td>{{ t.fecha_creacion|date:"d/m/Y" }}</td>
+                        <td>{{ t.fecha_entrega|date:"d/m/Y" }}</td>
                         <td>
-                            <a href="{% url 'core:pedido_detalle' pedido.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                            <a href="{% url 'core:trabajo_detalle' t.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{% url 'core:pedido_editar' pedido.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
+                            <a href="{% url 'core:trabajo_editar' t.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
                         </td>
@@ -105,13 +100,13 @@
             <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
             <p class="text-muted mt-3">
                 {% if query or estado_filtro %}
-                    No se encontraron pedidos con los filtros aplicados
+                    No se encontraron trabajos con los filtros aplicados
                 {% else %}
-                    No hay pedidos registrados
+                    No hay trabajos registrados
                 {% endif %}
             </p>
-            <a href="{% url 'core:pedido_crear' %}" class="btn btn-primary mt-2">
-                <i class="bi bi-plus-circle me-2"></i>Crear Primer Pedido
+            <a href="{% url 'core:trabajo_crear' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Crear Primer Trabajo
             </a>
         </div>
         {% endif %}
