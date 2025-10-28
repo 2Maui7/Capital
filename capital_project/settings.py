@@ -161,3 +161,7 @@ REST_FRAMEWORK = {
 LOGIN_URL = 'core:login'
 LOGIN_REDIRECT_URL = 'core:dashboard'
 LOGOUT_REDIRECT_URL = 'core:login'
+
+# Clientes: umbral para marcar como frecuente (pedidos entregados necesarios)
+# Puede configurarse vía variable de entorno CLIENTE_FRECUENTE_UMBRAL
+CLIENTE_FRECUENTE_UMBRAL = config('CLIENTE_FRECUENTE_UMBRAL', default=5, cast=int)

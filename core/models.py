@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from decimal import Decimal
@@ -24,10 +25,14 @@ class Cliente(models.Model):
         return self.nombre
     
     def actualizar_frecuencia(self):
-        """Marca como cliente frecuente si tiene más de 5 pedidos"""
-        if self.cantidad_pedidos >= 5:
-            self.es_frecuente = True
-            self.save()
+        """Marca cliente frecuente de forma dinámica según el umbral de pedidos entregados.
+        True si cantidad_pedidos >= 5, False en caso contrario.
+        """
+        umbral = getattr(settings, 'CLIENTE_FRECUENTE_UMBRAL', 5)
+        es_frecuente_nuevo = self.cantidad_pedidos >= umbral
+        if self.es_frecuente != es_frecuente_nuevo:
+            self.es_frecuente = es_frecuente_nuevo
+            self.save(update_fields=['es_frecuente'])
     
     def obtener_descuento(self):
         """Retorna el porcentaje de descuento según el tipo de cliente"""
@@ -158,8 +163,11 @@ class Pedido(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Actualizar contador de pedidos del cliente
-        self.cliente.cantidad_pedidos = self.cliente.pedidos.count()
+        # Actualizar contador de pedidos del cliente (solo pedidos ENTREGADOS)
+        self.cliente.cantidad_pedidos = self.cliente.pedidos.filter(estado='entregado').count()
+        # Guardar inmediatamente el contador
+        self.cliente.save(update_fields=['cantidad_pedidos'])
+        # Actualizar frecuencia si corresponde
         self.cliente.actualizar_frecuencia()
 
 
